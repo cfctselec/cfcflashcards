@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page Élégante à Deux Colonnes</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            max-width: 1200px;
+            margin: 20px auto;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background: white;
+            padding: 20px;
+        }
+        .column {
+            float: left;
+            width: 48%; /* Légèrement moins de 50% pour l'espacement */
+            margin: 1%; /* Espacement entre les colonnes */
+        }
+        .column h2 {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 10px 0;
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            font-size: 0.9em;
+            border-radius: 4px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .button:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column">
+            <h2>Colonne 1</h2>
+            <a href="http://example.com/page1.html" class="button">Lien 1</a>
+            <a href="http://example.com/page2.html" class="button">Lien 2</a>
+        </div>
+        <div class="column">
+            <h2>Colonne 2</h2>
+            <a href="http://example.com/page3.html" class="button">Lien 3</a>
+            <a href="http://example.com/page4.html" class="button">Lien 4</a>
+        </div>
+    </div>
+</body>
+</html>
