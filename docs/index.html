@@ -98,21 +98,23 @@
             margin: 0;
         }
         .button-fullwidth {
-            display: block;
-            width: 100%;
-            padding: 15px 0;
+            display: inline-block; /* Change block to inline-block for link-like appearance */
+            width: 100%; /* Reduce width by 50% */
+            padding: 10px 0; /* Adjust padding for smaller size */
             text-align: center;
-            background-color: #194532; /* Blue color */
-            color: white;
-            font-size: 1.2em;
-            text-decoration: none;
-            border-radius: 4px;
-            margin-bottom: 20px; /* Spacing below the button */
-            transition: background-color 0.3s, transform 0.3s;
+            background-color: transparent; /* Remove background color */
+            color: #194532; /* Keep text color for link appearance */
+            font-size: 1em; /* Adjust font size */
+            text-decoration: underline; /* Add underline for link-like appearance */
+            border-radius: 20px; /* Remove border radius */
+            margin: 20px auto; /* Center the button horizontally and add spacing */
+            transition: color 0.3s, transform 0.3s; /* Transition for hover effect */
+            border: 2px solid #ff002bf2;
         }
+
         .button-fullwidth:hover {
-            background-color: #7817ee; /* Darker blue on hover */
-            transform: translateY(-2px);
+            color: #7817ee; /* Change text color on hover */
+            transform: translateY(-2px); /* Slight movement on hover */
         }
     </style>
 </head>
@@ -120,9 +122,9 @@
     <div class="container">
         <div class="container-header">
             <h1>Révisions CFC ELMO/IELE/PELE/TELE</h1>
-            <p class="update-date">Mise à jour: 10.02.2025</p>
+            <p class="update-date">Mise à jour: 09.04.2025</p>
         </div>
-        <a href="https://qrhd1.github.io/oldcfc/" target="_blank" class="button-fullwidth">CP 2011-2023 (Données et corrigés)</a>
+        <a href="https://qrhd1.github.io/oldcfc/" target="_blank" class="button-fullwidth">CP 2011-2023 Écrits et oraux (Données et corrigés)</a>
 
         <div class="column">
             <h2>TS / BT (Electrotechnique) / TC</h2>
