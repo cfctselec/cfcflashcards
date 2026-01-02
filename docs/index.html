@@ -20,6 +20,35 @@
             background: white;
             padding: 20px;
         }
+        .container-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .update-date {
+            font-size: 0.8em;
+            color: #777;
+            margin: 0;
+        }
+        .button-fullwidth {
+            display: inline-block; /* Change block to inline-block for link-like appearance */
+            width: 100%; /* Reduce width by 50% */
+            padding: 10px 0; /* Adjust padding for smaller size */
+            text-align: center;
+            background-color: transparent; /* Remove background color */
+            color: #194532; /* Keep text color for link appearance */
+            font-size: 1em; /* Adjust font size */
+            text-decoration: underline; /* Add underline for link-like appearance */
+            border-radius: 20px; /* Remove border radius */
+            margin: 20px auto; /* Center the button horizontally and add spacing */
+            transition: color 0.3s, transform 0.3s; /* Transition for hover effect */
+            border: 2px solid #ff002bf2;
+        }
+
+        .button-fullwidth:hover {
+            color: #7817ee; /* Change text color on hover */
+            transform: translateY(-2px); /* Slight movement on hover */
+        }        
         .column {
             float: left;
             width: 48%;
@@ -92,7 +121,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>Révisions CFC</h1>
+        <div class="container-header">
+            <h1>Révisions CFC ELMO/IELE/PELE/TELE</h1>
+            <p class="update-date">Mise à jour: 02.01.2026</p>
+        </div>
+        <a href="https://qrhd1.github.io/oldcfc/" target="_blank" class="button-fullwidth">CP 2011-2023 Écrits et oraux (Données et corrigés)</a>         
         <div class="column">
             <h2>TS / BT (Electrotechnique) / TC</h2>
             <table>
