@@ -160,98 +160,84 @@
     const rad = (d) => d * Math.PI / 180;
     const deg = (r) => r * 180 / Math.PI;
 
-function computeAll(K) {
-    let o = { ...K };
-    let lastKeysCount = 0;
-    
-    // On boucle max 10 fois (suffisant pour la propagation) sans risque de boucle infinie
-    for(let i=0; i<10; i++) {
-        let keysCount = Object.keys(o).length;
-        if (keysCount === lastKeysCount) break; // Optimisation : on s'arrête si rien n'a changé
-        lastKeysCount = keysCount;
+    function computeAll(K) {
+        let o = { ...K };
+        for(let i=0; i<15; i++) {
+            if (o.f && o.L) o.XL = 2 * Math.PI * o.f * o.L;
+            if (o.XL && o.f && o.f > 0) o.L = o.XL / (2 * Math.PI * o.f);
+            if (o.R && o.XL) { o.Z = Math.sqrt(o.R**2 + o.XL**2); o.phi = deg(Math.atan2(o.XL, o.R)); o.cos_phi = o.R / o.Z; }
+            if (o.Z && o.cos_phi) { o.R = o.Z * o.cos_phi; o.XL = Math.sqrt(Math.max(0, o.Z**2 - o.R**2)); o.phi = deg(Math.acos(o.cos_phi)); }
+            if (o.I && o.Z) o.U = o.I * o.Z;
+            if (o.U && o.Z) o.I = o.U / o.Z;
+            if (o.U && o.I) o.Z = o.U / o.I;
+            if (o.I && o.R) o.UR = o.I * o.R;
+            if (o.I && o.XL) o.UL = o.I * o.XL;
+            if (o.UR && o.UL) { o.U = Math.sqrt(o.UR**2 + o.UL**2); o.phi = deg(Math.atan2(o.UL, o.UR)); o.cos_phi = o.UR/o.U;}
+            if (o.P && o.Q) { o.S = Math.sqrt(o.P**2 + o.Q**2); o.cos_phi = o.P / o.S; o.phi = deg(Math.acos(o.cos_phi)); }
+            if (o.U && o.I) o.S = o.U * o.I;
+            if (o.R && o.I) o.P = o.R * (o.I**2);
+            if (o.XL && o.I) o.Q = o.XL * (o.I**2);
 
-        // XL, f, L
-        if (o.f && o.L) o.XL = 2 * Math.PI * o.f * o.L;
-        if (o.XL && o.f && o.f > 0) o.L = o.XL / (2 * Math.PI * o.f);
-        if (o.XL && o.L && o.L > 0) o.f = o.XL / (2 * Math.PI * o.L);
-
-        // Loi d'Ohm & Impédances
-        if (o.U && o.I) o.Z = o.U / o.I;
-        if (o.U && o.Z && o.Z > 0) o.I = o.U / o.Z;
-        if (o.I && o.Z) o.U = o.I * o.Z;
-        
-        // Triangle Z, R, XL
-        if (o.R && o.XL) o.Z = Math.sqrt(o.R**2 + o.XL**2);
-        if (o.Z && o.R) o.XL = Math.sqrt(Math.max(0, o.Z**2 - o.R**2));
-        if (o.Z && o.XL) o.R = Math.sqrt(Math.max(0, o.Z**2 - o.XL**2));
-
-        // Puissances
-        if (o.U && o.I) o.S = o.U * o.I;
-        if (o.P && o.Q) o.S = Math.sqrt(o.P**2 + o.Q**2);
-        if (o.S && o.P) o.Q = Math.sqrt(Math.max(0, o.S**2 - o.P**2));
-        if (o.S && o.Q) o.P = Math.sqrt(Math.max(0, o.S**2 - o.Q**2));
-        
-        // Liens Puissances / Composants
-        if (o.P && o.I) o.R = o.P / (o.I**2);
-        if (o.Q && o.I) o.XL = o.Q / (o.I**2);
-        if (o.I && o.R) o.P = o.R * (o.I**2);
-        if (o.I && o.XL) o.Q = o.XL * (o.I**2);
-
-        // Trigonométrie
-        if (o.P && o.S) o.cos_phi = o.P / o.S;
-        if (o.R && o.Z) o.cos_phi = o.R / o.Z;
-        if (o.cos_phi) o.phi = deg(Math.acos(Math.min(1, Math.max(-1, o.cos_phi))));
-        if (o.phi) o.cos_phi = Math.cos(rad(o.phi));
-        
-        // Tensions
-        if (o.I && o.R) o.UR = o.I * o.R;
-        if (o.I && o.XL) o.UL = o.I * o.XL;
+            if (o.P && o.I) o.R = o.P / (o.I**2);
+            if (o.Q && o.I) o.XL = o.Q / (o.I**2);
+            if (o.S && o.I) o.Z = o.S / (o.I**2);
+            if (o.S && o.U) o.I = o.S / o.U;
+            if (o.P && o.U && o.cos_phi) o.I = o.P / (o.U * o.cos_phi);
+            if (o.P && o.S) o.cos_phi = o.P / o.S;
+            if (o.phi) o.cos_phi = Math.cos(rad(o.phi));            
+        }
+        return o;
     }
-    return o;
-}
+
+
 function generateExercise() {
     document.getElementById('solutionMethod').style.display = 'none';
     document.getElementById('hintBox').style.display = 'none';
     
     let success = false;
     while (!success) {
+        // --- NOUVELLE LOGIQUE DE SÉLECTION ---
         let pool = [...VARIABLE_BANKS];
         let triplet = [];
-        
-        // Tirage de 4 grandeurs au hasard pur parmi les 14
-        for(let i=0; i<4; i++) {
+
+        // On force l'inclusion d'une puissance ou cos_phi pour varier
+        const powers = ["P", "Q", "S", "cos_phi"];
+        let forceKey = powers[Math.floor(Math.random() * powers.length)];
+        triplet.push(forceKey);
+        pool.splice(pool.indexOf(forceKey), 1);
+
+        // On complète avec 3 autres variables totalement au hasard
+        for(let i=0; i<3; i++) {
             let idx = Math.floor(Math.random() * pool.length);
             triplet.push(pool.splice(idx, 1)[0]);
         }
 
-        // Valeurs "Seed" ultra-aléatoires (Toutes les plages sont couvertes)
+        // --- GÉNÉRATION DE VALEURS ULTRA-ALÉATOIRES ---
         const seed = {
-            f: Math.floor(Math.random() * 500) + 1,        // 1 à 500 Hz
-            L: Math.random() * 2 + 0.001,                 // 1mH à 2H
-            U: Math.floor(Math.random() * 1000) + 1,      // 1V à 1000V
-            R: Math.floor(Math.random() * 1000) + 1       // 1Ω à 1000Ω
+            f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
+            L: Math.random() * 0.8 + 0.001,               // 1mH à 800mH
+            U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
+            R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
         };
 
         const fullRef = computeAll(seed);
         let testKnown = {};
         triplet.forEach(k => testKnown[k] = fullRef[k]);
-        
-        // Tentative de résolution inverse
+
         const result = computeAll(testKnown);
         
-        // Validation : Si toutes les variables sont trouvées, on accepte le tirage
+        // Vérification de la résolvabilité
         if (ALL_KEYS.every(k => result[k.id] !== undefined && !isNaN(result[k.id]) && isFinite(result[k.id]))) {
             STATE.all = result; 
             STATE.triplet = triplet; 
             STATE.revealed = false; 
             success = true;
         }
-        // Sinon, la boucle while relance un tirage instantanément (incassable)
     }
+    
     document.getElementById('tripletDisplay').textContent = STATE.triplet.join(' | ');
     updateUI();
 }
-
     // function generateExercise() {
     //     document.getElementById('solutionMethod').style.display = 'none';
     //     document.getElementById('hintBox').style.display = 'none';
@@ -319,51 +305,42 @@ function revealAnswers() {
     let known = [...STATE.triplet]; 
     let stepIdx = 1;
 
-    // Base de connaissance exhaustive (Toutes les routes possibles)
     const logic = [
-        // --- Fréquence / Inductance / XL ---
-        { req: ['f', 'L'], res: 'XL', t: "Réactance inductive", f: "X_L = 2\\pi f L" },
-        { req: ['XL', 'f'], res: 'L', t: "Inductance", f: "L = \\frac{X_L}{2\\pi f}" },
-        
-        // --- Impédances (Triangle Z) ---
-        { req: ['R', 'XL'], res: 'Z', t: "Impédance totale", f: "Z = \\sqrt{R^2 + X_L^2}" },
-        { req: ['Z', 'R'], res: 'XL', t: "Réactance via Z", f: "X_L = \\sqrt{Z^2 - R^2}" },
-        { req: ['Z', 'XL'], res: 'R', t: "Résistance via Z", f: "R = \\sqrt{Z^2 - X_L^2}" },
-        
-        // --- Loi d'Ohm (U, I, Z) ---
-        { req: ['U', 'Z'], res: 'I', t: "Intensité efficace", f: "I = \\frac{U}{Z}" },
-        { req: ['U', 'I'], res: 'Z', t: "Impédance via Loi d'Ohm", f: "Z = \\frac{U}{I}" },
-        { req: ['I', 'Z'], res: 'U', t: "Tension Source", f: "U = Z \\cdot I" },
-        
-        // --- Tensions partielles (UR, UL) ---
-        { req: ['I', 'R'], res: 'UR', t: "Tension aux bornes de R", f: "U_R = R \\cdot I" },
-        { req: ['I', 'XL'], res: 'UL', t: "Tension aux bornes de L", f: "U_L = X_L \\cdot I" },
-        { req: ['UR', 'UL'], res: 'U', t: "Tension totale (Pythagore)", f: "U = \\sqrt{U_R^2 + U_L^2}" },
-        { req: ['U', 'UR'], res: 'UL', t: "Tension inductive", f: "U_L = \\sqrt{U^2 - U_R^2}" },
-        { req: ['U', 'UL'], res: 'UR', t: "Tension résistive", f: "U_R = \\sqrt{U^2 - U_L^2}" },
+        // --- 1. TRIGONOMÉTRIE ET FACTEUR DE PUISSANCE (Clé pour le triplet P|phi|U|f) ---
+        { req: ['phi'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\cos(\\varphi) \\quad [-]" },
+        { req: ['cos_phi'], res: 'phi', t: "Angle de déphasage", f: "\\varphi = \\arccos(\\cos\\varphi) \\quad [^\\circ]" },
 
-        // --- Puissances (P, Q, S) ---
-        { req: ['U', 'I'], res: 'S', t: "Puissance apparente", f: "S = U \\cdot I" },
-        { req: ['I', 'R'], res: 'P', t: "Puissance active", f: "P = R \\cdot I^2" },
-        { req: ['I', 'XL'], res: 'Q', t: "Puissance réactive", f: "Q = X_L \\cdot I^2" },
-        { req: ['P', 'Q'], res: 'S', t: "Puissance apparente (Triangle)", f: "S = \\sqrt{P^2 + Q^2}" },
-        { req: ['S', 'P'], res: 'Q', t: "Puissance réactive", f: "Q = \\sqrt{S^2 - P^2}" },
-        { req: ['S', 'Q'], res: 'P', t: "Puissance active", f: "P = \\sqrt{S^2 - Q^2}" },
+        // --- 2. LOI D'OHM ET PUISSANCES DE BASE ---
+        { req: ['P', 'U', 'cos_phi'], res: 'I', t: "Intensité via Puissance Active", f: "I = \\frac{P}{U \\cdot \\cos\\varphi} \\quad [A]" },
+        { req: ['U', 'Z'], res: 'I', t: "Intensité efficace (Loi d'Ohm)", f: "I = \\frac{U}{Z} \\quad [A]" },
+        { req: ['S', 'I'], res: 'U', t: "Tension Source (via S)", f: "U = \\frac{S}{I} \\quad [V]" },
+        { req: ['S', 'U'], res: 'I', t: "Intensité efficace (via S)", f: "I = \\frac{S}{U} \\quad [A]" },
+        { req: ['U', 'I'], res: 'S', t: "Puissance apparente", f: "S = U \\cdot I \\quad [V\\!\\!A]" },
 
-        // --- Liaisons Mixtes (Puissance <-> Composants) ---
-        { req: ['P', 'I'], res: 'R', t: "Résistance via Puissance", f: "R = \\frac{P}{I^2}" },
-        { req: ['Q', 'I'], res: 'XL', t: "Réactance via Puissance", f: "X_L = \\frac{Q}{I^2}" },
-        { req: ['S', 'I'], res: 'Z', t: "Impédance via S", f: "Z = \\frac{S}{I^2}" },
-        { req: ['P', 'UR'], res: 'I', t: "Intensité via P et UR", f: "I = \\frac{P}{U_R}" },
+        // --- 3. TRIANGLE DES PUISSANCES ---
+        { req: ['S', 'cos_phi'], res: 'P', t: "Puissance active", f: "P = S \\cdot \\cos\\varphi \\quad [W]" },
+        { req: ['P', 'S'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{P}{S} \\quad [-]" },
+        { req: ['P', 'S'], res: 'Q', t: "Puissance réactive", f: "Q = \\sqrt{S^2 - P^2} \\quad [var]" },
+        { req: ['P', 'Q'], res: 'S', t: "Puissance apparente (Triangle)", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
+        { req: ['S', 'Q'], res: 'P', t: "Puissance active (Triangle)", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
 
-        // --- Trigonométrie (phi et cos phi) ---
-        { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{R}{Z}" },
-        { req: ['P', 'S'], res: 'cos_phi', t: "Facteur de puissance via P,S", f: "\\cos\\varphi = \\frac{P}{S}" },
-        { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance via UR,U", f: "\\cos\\varphi = \\frac{U_R}{U}" },
-        { req: ['cos_phi'], res: 'phi', t: "Angle de déphasage", f: "\\varphi = \\arccos(\\cos\\varphi)" },
-        { req: ['phi'], res: 'cos_phi', t: "Facteur de puissance via angle", f: "\\cos\\varphi = \\cos(\\varphi)" },
-        { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance via cos phi", f: "R = Z \\cdot \\cos\\varphi" },
-        { req: ['S', 'cos_phi'], res: 'P', t: "Puissance active via cos phi", f: "P = S \\cdot \\cos\\varphi" }
+        // --- 4. IMPÉDANCES ET COMPOSANTS (R, XL, L) ---
+        { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
+        { req: ['P', 'I'], res: 'R', t: "Résistance via P", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
+        { req: ['Q', 'I'], res: 'XL', t: "Réactance via Q", f: "X_L = \\frac{Q}{I^2} \\quad [\\Omega]" },
+        { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance via Z", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
+        { req: ['Z', 'R'], res: 'XL', t: "Réactance via Z", f: "X_L = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
+        { req: ['R', 'XL'], res: 'Z', t: "Impédance totale (Triangle)", f: "Z = \\sqrt{R^2 + X_L^2} \\quad [\\Omega]" },
+        { req: ['XL', 'f'], res: 'L', t: "Inductance", f: "L = \\frac{X_L}{2\\pi f} \\quad [H]" },
+        { req: ['f', 'L'], res: 'XL', t: "Réactance inductive", f: "X_L = 2\\pi f L \\quad [\\Omega]" },
+
+        // --- 5. TENSIONS PARTIELLES ---
+        { req: ['I', 'R'], res: 'UR', t: "Tension Résistive", f: "U_R = R \\cdot I \\quad [V]" },
+        { req: ['I', 'XL'], res: 'UL', t: "Tension Inductive", f: "U_L = X_L \\cdot I \\quad [V]" },
+        { req: ['UR', 'UL'], res: 'U', t: "Tension Source (Triangle)", f: "U = \\sqrt{U_R^2 + U_L^2} \\quad [V]" },
+        { req: ['U', 'UR'], res: 'UL', t: "Tension Inductive (via U)", f: "U_L = \\sqrt{U^2 - U_R^2} \\quad [V]" },
+        { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance (R/Z)", f: "\\cos\\varphi = \\frac{R}{Z} \\quad [-]" },
+        { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance (UR/U)", f: "\\cos\\varphi = \\frac{U_R}{U} \\quad [-]" }
     ];
 
     let foundNew;
@@ -371,17 +348,13 @@ function revealAnswers() {
         foundNew = false;
         logic.forEach(s => {
             if(!known.includes(s.res) && s.req.every(r => known.includes(r))) {
-                let val = STATE.all[s.res];
-                let displayVal = (s.res === "L") ? val.toFixed(4) : val.toFixed(2);
-                let unit = ALL_KEYS.find(k => k.id === s.res).unit;
-
                 html += `
                     <div class="method-step">
                         <div class="step-num">${stepIdx++}</div>
                         <div style="flex:1">
-                            <b style="color: #64ffda;">${s.t} (${s.res}) :</b>
+                            <b style="color: #64ffda;">${s.t} :</b>
                             <div style="background: #111b2d; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 3px solid #64ffda; color: #e6f1ff; font-size: 1.1em;">
-                                $$ ${s.f} = ${displayVal} \\, [${unit}] $$
+                                $$ ${s.f} $$
                             </div>
                         </div>
                     </div>`;
@@ -391,10 +364,9 @@ function revealAnswers() {
         });
     } while(foundNew);
 
-    stepsList.innerHTML = html || "<p>Calcul direct.</p>";
+    stepsList.innerHTML = html;
     if (window.MathJax) MathJax.typesetPromise([stepsList]);
 }
-
 // function revealAnswers() {
 //     STATE.revealed = true;
 //     updateUI();
