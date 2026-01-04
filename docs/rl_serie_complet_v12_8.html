@@ -160,9 +160,11 @@
     const rad = (d) => d * Math.PI / 180;
     const deg = (r) => r * 180 / Math.PI;
 
+        
     function computeAll(K) {
         let o = { ...K };
         for(let i=0; i<15; i++) {
+            if (o.XL && o.L && o.L > 0) o.f = o.XL / (2 * Math.PI * o.L);
             if (o.f && o.L) o.XL = 2 * Math.PI * o.f * o.L;
             if (o.XL && o.f && o.f > 0) o.L = o.XL / (2 * Math.PI * o.f);
             if (o.R && o.XL) { o.Z = Math.sqrt(o.R**2 + o.XL**2); o.phi = deg(Math.atan2(o.XL, o.R)); o.cos_phi = o.R / o.Z; }
@@ -306,7 +308,7 @@ function revealAnswers() {
     let stepIdx = 1;
 
     const logic = [
-        // --- 1. TRIGONOMÉTRIE ET FACTEUR DE PUISSANCE (Clé pour le triplet P|phi|U|f) ---
+        // --- 1. TRIGONOMÉTRIE ET FACTEUR DE PUISSANCE ---
         { req: ['phi'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\cos(\\varphi) \\quad [-]" },
         { req: ['cos_phi'], res: 'phi', t: "Angle de déphasage", f: "\\varphi = \\arccos(\\cos\\varphi) \\quad [^\\circ]" },
 
@@ -324,13 +326,16 @@ function revealAnswers() {
         { req: ['P', 'Q'], res: 'S', t: "Puissance apparente (Triangle)", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
         { req: ['S', 'Q'], res: 'P', t: "Puissance active (Triangle)", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
 
-        // --- 4. IMPÉDANCES ET COMPOSANTS (R, XL, L) ---
+        // --- 4. IMPÉDANCES ET COMPOSANTS (f, L, R, XL, Z) ---
         { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
         { req: ['P', 'I'], res: 'R', t: "Résistance via P", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
         { req: ['Q', 'I'], res: 'XL', t: "Réactance via Q", f: "X_L = \\frac{Q}{I^2} \\quad [\\Omega]" },
         { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance via Z", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
         { req: ['Z', 'R'], res: 'XL', t: "Réactance via Z", f: "X_L = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
         { req: ['R', 'XL'], res: 'Z', t: "Impédance totale (Triangle)", f: "Z = \\sqrt{R^2 + X_L^2} \\quad [\\Omega]" },
+        
+        // Formules pour la fréquence et l'inductance
+        { req: ['XL', 'L'], res: 'f', t: "Fréquence du réseau", f: "f = \\frac{X_L}{2\\pi L} \\quad [Hz]" },
         { req: ['XL', 'f'], res: 'L', t: "Inductance", f: "L = \\frac{X_L}{2\\pi f} \\quad [H]" },
         { req: ['f', 'L'], res: 'XL', t: "Réactance inductive", f: "X_L = 2\\pi f L \\quad [\\Omega]" },
 
@@ -367,6 +372,7 @@ function revealAnswers() {
     stepsList.innerHTML = html;
     if (window.MathJax) MathJax.typesetPromise([stepsList]);
 }
+
 // function revealAnswers() {
 //     STATE.revealed = true;
 //     updateUI();
