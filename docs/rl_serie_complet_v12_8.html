@@ -313,26 +313,26 @@ function revealAnswers() {
         { req: ['cos_phi'], res: 'phi', t: "Angle de déphasage", f: "\\varphi = \\arccos(\\cos\\varphi) \\quad [^\\circ]" },
 
         // --- 2. LOI D'OHM ET PUISSANCES DE BASE ---
-        { req: ['P', 'U', 'cos_phi'], res: 'I', t: "Intensité via Puissance Active", f: "I = \\frac{P}{U \\cdot \\cos\\varphi} \\quad [A]" },
+        { req: ['P', 'U', 'cos_phi'], res: 'I', t: "Intensité", f: "I = \\frac{P}{U \\cdot \\cos\\varphi} \\quad [A]" },
         { req: ['U', 'Z'], res: 'I', t: "Intensité efficace (Loi d'Ohm)", f: "I = \\frac{U}{Z} \\quad [A]" },
-        { req: ['S', 'I'], res: 'U', t: "Tension Source (via S)", f: "U = \\frac{S}{I} \\quad [V]" },
-        { req: ['S', 'U'], res: 'I', t: "Intensité efficace (via S)", f: "I = \\frac{S}{U} \\quad [A]" },
+        { req: ['S', 'I'], res: 'U', t: "Tension Source", f: "U = \\frac{S}{I} \\quad [V]" },
+        { req: ['S', 'U'], res: 'I', t: "Intensité efficace", f: "I = \\frac{S}{U} \\quad [A]" },
         { req: ['U', 'I'], res: 'S', t: "Puissance apparente", f: "S = U \\cdot I \\quad [V\\!\\!A]" },
 
         // --- 3. TRIANGLE DES PUISSANCES ---
         { req: ['S', 'cos_phi'], res: 'P', t: "Puissance active", f: "P = S \\cdot \\cos\\varphi \\quad [W]" },
         { req: ['P', 'S'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{P}{S} \\quad [-]" },
         { req: ['P', 'S'], res: 'Q', t: "Puissance réactive", f: "Q = \\sqrt{S^2 - P^2} \\quad [var]" },
-        { req: ['P', 'Q'], res: 'S', t: "Puissance apparente (Triangle)", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
-        { req: ['S', 'Q'], res: 'P', t: "Puissance active (Triangle)", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
+        { req: ['P', 'Q'], res: 'S', t: "Puissance apparente", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
+        { req: ['S', 'Q'], res: 'P', t: "Puissance active", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
 
         // --- 4. IMPÉDANCES ET COMPOSANTS (f, L, R, XL, Z) ---
         { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
-        { req: ['P', 'I'], res: 'R', t: "Résistance via P", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
-        { req: ['Q', 'I'], res: 'XL', t: "Réactance via Q", f: "X_L = \\frac{Q}{I^2} \\quad [\\Omega]" },
-        { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance via Z", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
-        { req: ['Z', 'R'], res: 'XL', t: "Réactance via Z", f: "X_L = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
-        { req: ['R', 'XL'], res: 'Z', t: "Impédance totale (Triangle)", f: "Z = \\sqrt{R^2 + X_L^2} \\quad [\\Omega]" },
+        { req: ['P', 'I'], res: 'R', t: "Résistance", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
+        { req: ['Q', 'I'], res: 'XL', t: "Réactance inductive", f: "X_L = \\frac{Q}{I^2} \\quad [\\Omega]" },
+        { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
+        { req: ['Z', 'R'], res: 'XL', t: "Réactance inductive", f: "X_L = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
+        { req: ['R', 'XL'], res: 'Z', t: "Impédance totale", f: "Z = \\sqrt{R^2 + X_L^2} \\quad [\\Omega]" },
         
         // Formules pour la fréquence et l'inductance
         { req: ['XL', 'L'], res: 'f', t: "Fréquence du réseau", f: "f = \\frac{X_L}{2\\pi L} \\quad [Hz]" },
@@ -342,10 +342,10 @@ function revealAnswers() {
         // --- 5. TENSIONS PARTIELLES ---
         { req: ['I', 'R'], res: 'UR', t: "Tension Résistive", f: "U_R = R \\cdot I \\quad [V]" },
         { req: ['I', 'XL'], res: 'UL', t: "Tension Inductive", f: "U_L = X_L \\cdot I \\quad [V]" },
-        { req: ['UR', 'UL'], res: 'U', t: "Tension Source (Triangle)", f: "U = \\sqrt{U_R^2 + U_L^2} \\quad [V]" },
-        { req: ['U', 'UR'], res: 'UL', t: "Tension Inductive (via U)", f: "U_L = \\sqrt{U^2 - U_R^2} \\quad [V]" },
-        { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance (R/Z)", f: "\\cos\\varphi = \\frac{R}{Z} \\quad [-]" },
-        { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance (UR/U)", f: "\\cos\\varphi = \\frac{U_R}{U} \\quad [-]" }
+        { req: ['UR', 'UL'], res: 'U', t: "Tension Source", f: "U = \\sqrt{U_R^2 + U_L^2} \\quad [V]" },
+        { req: ['U', 'UR'], res: 'UL', t: "Tension Inductive", f: "U_L = \\sqrt{U^2 - U_R^2} \\quad [V]" },
+        { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{R}{Z} \\quad [-]" },
+        { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{U_R}{U} \\quad [-]" }
     ];
 
     let foundNew;
