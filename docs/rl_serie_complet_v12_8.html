@@ -281,22 +281,40 @@ function generateExercise() {
         drawVisuals();
     }
 
-    function showHint() {
-        const hintBox = document.getElementById('hintBox');
-        const hintText = document.getElementById('hintText');
-        hintBox.style.display = 'block';
-        let hints = [];
-        const k = STATE.triplet;
+function showHint() {
+    const hintBox = document.getElementById('hintBox');
+    const hintText = document.getElementById('hintText');
+    hintBox.style.display = 'block';
 
-        if (k.includes('f') && k.includes('L')) hints.push("💡 Utilisez $f$ et $L$ pour calculer la réactance $X_L$.");
-        if (k.includes('R') && k.includes('XL')) hints.push("💡 Avec $R$ et $X_L$, vous pouvez trouver l'impédance totale $Z$ (Pythagore).");
-        if (k.includes('U') && k.includes('Z')) hints.push("💡 La loi d'Ohm $I = U/Z$ vous donnera l'intensité.");
-        
-        hintText.innerHTML = hints.length > 0 ? hints.join("<br>") : "Analysez les relations entre les tensions ou les puissances pour débloquer une variable.";
-        if (window.MathJax) MathJax.typesetPromise([hintText]);
+    // Bloc de formules de base (non transformées)
+    const formulaBlock = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed var(--induct);">
+            <div style="text-align: center;">$$Z = \\sqrt{R^2 + X_L^2}$$</div>
+            <div style="text-align: center;">$$U = Z \\cdot I$$</div>
+            <div style="text-align: center;">$$X_L = 2\\pi f L$$</div>
+            <div style="text-align: center;">$$\\cos\\varphi = \\frac{R}{Z} = \\frac{P}{S}$$</div>
+            <div style="text-align: center;">$$S = U \\cdot I$$</div>
+            <div style="text-align: center;">$$P = R \\cdot I^2$$</div>
+            <div style="text-align: center;">$$Q = X_L \\cdot I^2$$</div>
+            <div style="text-align: center;">$$S = \\sqrt{P^2 + Q^2}$$</div>
+            <div style="text-align: center;">$$U = \\sqrt{U_R^2 + U_L^2}$$</div>
+            <div style="text-align: center;">$$U_R = R \\cdot I$$</div>
+        </div>
+        <p style="margin-top: 15px; font-style: italic; color: var(--muted); text-align: center;">
+            Identifiez les variables connues et isolez l'inconnue à l'aide de ces relations fondamentales.
+        </p>
+    `;
+
+    hintText.innerHTML = formulaBlock;
+    
+    if (window.MathJax) {
+        MathJax.typesetPromise([hintText]);
     }
-
+    
+    hintBox.scrollIntoView({ behavior: 'smooth' });
+}
 function revealAnswers() {
+    document.getElementById('hintBox').style.display = 'none'; // Masquer l'indice
     STATE.revealed = true;
     updateUI();
     const solDiv = document.getElementById('solutionMethod');
