@@ -289,16 +289,16 @@ function showHint() {
     // Bloc de formules de base (non transformées)
     const formulaBlock = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed var(--induct);">
-            <div style="text-align: center;">$$Z = \\sqrt{R^2 + X_L^2}$$</div>
-            <div style="text-align: center;">$$U = Z \\cdot I$$</div>
+            <div style="text-align: center;">$$Z = \\sqrt{R^2 + X_L^2}\\quad [\\Omega]$$</div>
+            <div style="text-align: center;">$$U = Z \\cdot I \\quad [V]$$</div>
             <div style="text-align: center;">$$\\cos\\varphi = \\frac{R}{Z} = \\frac{P}{S} = \\frac{U_R}{U}$$</div>
-            <div style="text-align: center;">$$X_L = 2\\pi f L$$</div>
-            <div style="text-align: center;">$$S = U \\cdot I$$</div>
-            <div style="text-align: center;">$$P = R \\cdot I^2$$</div>
-            <div style="text-align: center;">$$Q = X_L \\cdot I^2$$</div>
-            <div style="text-align: center;">$$S = \\sqrt{P^2 + Q^2}$$</div>
-            <div style="text-align: center;">$$U = \\sqrt{U_R^2 + U_L^2}$$</div>
-            <div style="text-align: center;">$$U_R = R \\cdot I$$</div>
+            <div style="text-align: center;">$$X_L = 2\\pi f L \\quad [\\Omega]$$</div>
+            <div style="text-align: center;">$$S = U \\cdot I \\quad [V\\!\\!A]$$</div>
+            <div style="text-align: center;">$$P = R \\cdot I^2\\quad [W]$$</div>
+            <div style="text-align: center;">$$Q = X_L \\cdot I^2\\quad [var]$$</div>
+            <div style="text-align: center;">$$S = \\sqrt{P^2 + Q^2}\\quad [V\\!\\!A]$$</div>
+            <div style="text-align: center;">$$U = \\sqrt{U_R^2 + U_L^2}\\quad [V]$$</div>
+            <div style="text-align: center;">$$U_R = R \\cdot I\\quad [V]$$</div>
         </div>
         <p style="margin-top: 15px; font-style: italic; color: var(--muted); text-align: center;">
             Identifiez les variables connues et isolez l'inconnue à l'aide de ces relations fondamentales.
