@@ -164,7 +164,7 @@
 
 <script>
     const ALL_KEYS = [
-        {id:"f", label:"Fréquence", unit:"Hz"}, {id:"L", label:"Inductance L", unit:"H"},
+        {id:"f", label:"Fréquence", unit:"Hz"}, {id:"C", label:"Capacité C", unit:"F"},
         {id:"U", label:"Tension Source U", unit:"V"}, {id:"I", label:"Courant I", unit:"A"}, 
         {id:"R", label:"Résistance R", unit:"Ω"}, {id:"XC", label:"Réactance XC", unit:"Ω"}, 
         {id:"Z", label:"Impédance Z", unit:"Ω"}, {id:"UR", label:"Tension UR", unit:"V"}, 
@@ -173,7 +173,7 @@
         {id:"cos_phi", label:"cos φ", unit:"-"}, {id:"phi", label:"Déphasage φ", unit:"°"}
     ];
 
-    const VARIABLE_BANKS = ["f", "L", "U", "I", "R", "XC", "Z", "UR", "UC", "P", "Q", "S", "cos_phi", "phi"];
+    const VARIABLE_BANKS = ["f", "C", "U", "I", "R", "XC", "Z", "UR", "UC", "P", "Q", "S", "cos_phi", "phi"];
     let STATE = { all: {}, triplet: [], revealed: false };
 
     const rad = (d) => d * Math.PI / 180;
@@ -183,9 +183,9 @@
     function computeAll(K) {
         let o = { ...K };
         for(let i=0; i<15; i++) {
-            if (o.XC && o.L && o.L > 0) o.f = o.XC / (2 * Math.PI * o.L);
-            if (o.f && o.L) o.XC = 2 * Math.PI * o.f * o.L;
-            if (o.XC && o.f && o.f > 0) o.L = o.XC / (2 * Math.PI * o.f);
+            if (o.XC && o.C && o.C > 0) o.f = o.XC / (2 * Math.PI * o.C);
+            if (o.f && o.C) o.XC = 2 * Math.PI * o.f * o.C;
+            if (o.XC && o.f && o.f > 0) o.C = o.XC / (2 * Math.PI * o.f);
             if (o.R && o.XC) { o.Z = Math.sqrt(o.R**2 + o.XC**2); o.phi = deg(Math.atan2(o.XC, o.R)); o.cos_phi = o.R / o.Z; }
             if (o.Z && o.cos_phi) { o.R = o.Z * o.cos_phi; o.XC = Math.sqrt(Math.max(0, o.Z**2 - o.R**2)); o.phi = deg(Math.acos(o.cos_phi)); }
             if (o.I && o.Z) o.U = o.I * o.Z;
@@ -236,7 +236,7 @@ function generateExercise() {
         // --- GÉNÉRATION DE VALEURS ULTRA-ALÉATOIRES ---
         const seed = {
             f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
-            L: Math.random() * 0.8 + 0.001,               // 1mH à 800mH
+            C: Math.random() * 0.8 + 0.001,               // 1mH à 800mH
             U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
             R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
         };
@@ -265,7 +265,7 @@ function generateExercise() {
         const grid = document.getElementById('inputGrid');
         grid.innerHTML = ALL_KEYS.map(k => {
             const isKnown = STATE.triplet.includes(k.id);
-            const val = k.id === "L" ? (STATE.all[k.id]).toFixed(4) : Math.round(STATE.all[k.id]*100)/100;
+            const val = k.id === "C" ? (STATE.all[k.id]).toFixed(4) : Math.round(STATE.all[k.id]*100)/100;
             return `
                 <div class="input-group ${isKnown ? 'given' : ''}">
                     <label>${k.label}</label>
@@ -340,7 +340,7 @@ function revealAnswers() {
         { req: ['P', 'Q'], res: 'S', t: "Puissance apparente", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
         { req: ['S', 'Q'], res: 'P', t: "Puissance active", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
 
-        // --- 4. IMPÉDANCES ET COMPOSANTS (f, L, R, XC, Z) ---
+        // --- 4. IMPÉDANCES ET COMPOSANTS (f, C, R, XC, Z) ---
         { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
         { req: ['P', 'I'], res: 'R', t: "Résistance", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
         { req: ['Q', 'I'], res: 'XC', t: "Réactance capacitive", f: "X_C = \\frac{Q}{I^2} \\quad [\\Omega]" },
