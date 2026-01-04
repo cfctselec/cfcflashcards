@@ -80,6 +80,17 @@
         .dot-i { width: 8px; height: 8px; background: var(--current); border-radius: 50%; }
         .info-bar { background: #1a2b4e; padding: 8px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; color: var(--accent); border-left: 4px solid var(--accent); }
 
+        .value-display {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 700;
+            outline: none;
+            padding: 2px 0; /* Alignement avec les autres inputs */
+        }
+
         #solutionMethod {
             margin-top: 30px; background: #1e293b; padding: 25px;
             border-radius: 12px; border: 2px solid var(--success);
@@ -184,7 +195,7 @@
         let o = { ...K };
         for(let i=0; i<15; i++) {
             if (o.XC && o.C && o.C > 0) o.f = o.XC / (2 * Math.PI * o.C);
-            if (o.f && o.C) o.XC = 2 * Math.PI * o.f * o.C;
+            if (o.f && o.C) o.XC = 1 / (2 * Math.PI * o.f * o.C);
             if (o.XC && o.f && o.f > 0) o.C = o.XC / (2 * Math.PI * o.f);
             if (o.R && o.XC) { o.Z = Math.sqrt(o.R**2 + o.XC**2); o.phi = deg(Math.atan2(o.XC, o.R)); o.cos_phi = o.R / o.Z; }
             if (o.Z && o.cos_phi) { o.R = o.Z * o.cos_phi; o.XC = Math.sqrt(Math.max(0, o.Z**2 - o.R**2)); o.phi = deg(Math.acos(o.cos_phi)); }
@@ -236,7 +247,7 @@ function generateExercise() {
         // --- GÉNÉRATION DE VALEURS ULTRA-ALÉATOIRES ---
         const seed = {
             f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
-            C: Math.random() * 0.8 + 0.001,               // 1mH à 800mH
+            C: Math.random() * 0.8 + 0.000001,               
             U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
             R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
         };
@@ -265,14 +276,24 @@ function generateExercise() {
         const grid = document.getElementById('inputGrid');
         grid.innerHTML = ALL_KEYS.map(k => {
             const isKnown = STATE.triplet.includes(k.id);
-            const val = k.id === "C" ? (STATE.all[k.id]).toFixed(4) : Math.round(STATE.all[k.id]*100)/100;
+            let val;
+            if (k.id === "C") {
+                const expo = STATE.all[k.id].toExponential(2); // ex: "1.23e-6"
+                const parts = expo.split('e');
+                // On transforme "1.23e-6" en "1.23 × 10<sup>-6</sup>"
+                val = `${parts[0]} × 10<sup>${parts[1]}</sup>`;
+            } else {
+                val = Math.round(STATE.all[k.id] * 100) / 100;
+            }
             return `
                 <div class="input-group ${isKnown ? 'given' : ''}">
                     <label>${k.label}</label>
-                    <input type="text" value="${val}" class="${!isKnown && !STATE.revealed ? 'hidden-ans' : (STATE.revealed && !isKnown ? 'revealed' : '')}" readonly>
+                    <div class="value-display ${!isKnown && !STATE.revealed ? 'hidden-ans' : (STATE.revealed && !isKnown ? 'revealed' : '')}">
+                        ${val}
+                    </div>
                     <span class="unit">${k.unit}</span>
                 </div>`;
-        }).join('');
+            }).join('');
         document.getElementById('periodDisplay').textContent = `T = ${(1000/STATE.all.f).toFixed(1)}ms`;
         drawVisuals();
     }
