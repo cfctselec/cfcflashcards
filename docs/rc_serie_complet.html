@@ -80,15 +80,26 @@
         .dot-i { width: 8px; height: 8px; background: var(--current); border-radius: 50%; }
         .info-bar { background: #1a2b4e; padding: 8px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; color: var(--accent); border-left: 4px solid var(--accent); }
 
+
+        .hidden-ans { filter: blur(8px); pointer-events: none; user-select: none; }
+        .revealed { color: var(--success) !important; filter: none !important; }
+
         .value-display {
             width: 100%;
-            background: transparent;
-            border: none;
             color: white;
             font-size: 1.1rem;
             font-weight: 700;
-            outline: none;
-            padding: 2px 0; /* Alignement avec les autres inputs */
+            display: flex;
+            align-items: baseline; /* Aligne la base du texte et des chiffres */
+            min-height: 1.5rem;
+        }
+
+        sup {
+            font-size: 0.7rem;
+            margin-left: 2px;
+            vertical-align: baseline;
+            position: relative;
+            top: -0.4em; /* Positionne l'exposant de façon élégante */
         }
 
         #solutionMethod {
@@ -245,13 +256,19 @@ function generateExercise() {
         }
 
         // --- GÉNÉRATION DE VALEURS ULTRA-ALÉATOIRES ---
+        // const seed = {
+        //     f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
+        //     C: Math.random() * 0.8 + 0.000000001,               
+        //     U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
+        //     R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
+        // };
+        // Dans la fonction generateExercise, remplacez le bloc seed par :
         const seed = {
-            f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
-            C: Math.random() * 0.8 + 0.000001,               
-            U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
-            R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
+            f: Math.round((Math.random() * 400 + 10) * 10) / 10,   // Arrondi 1 décimale
+            C: Math.random() * 0.8 + 0.000000001,                 // Gardé brut pour XC
+            U: Math.round((Math.random() * 990 + 10) * 10) / 10,  // Arrondi 1 décimale
+            R: Math.round((Math.random() * 490 + 10) * 10) / 10   // Arrondi 1 décimale
         };
-
         const fullRef = computeAll(seed);
         let testKnown = {};
         triplet.forEach(k => testKnown[k] = fullRef[k]);
@@ -271,32 +288,62 @@ function generateExercise() {
     updateUI();
 }
 
-
-    function updateUI() {
-        const grid = document.getElementById('inputGrid');
-        grid.innerHTML = ALL_KEYS.map(k => {
-            const isKnown = STATE.triplet.includes(k.id);
-            let val;
-            if (k.id === "C") {
-                const expo = STATE.all[k.id].toExponential(2); // ex: "1.23e-6"
-                const parts = expo.split('e');
-                // On transforme "1.23e-6" en "1.23 × 10<sup>-6</sup>"
-                val = `${parts[0]} × 10<sup>${parts[1]}</sup>`;
-            } else {
-                val = Math.round(STATE.all[k.id] * 100) / 100;
-            }
-            return `
-                <div class="input-group ${isKnown ? 'given' : ''}">
-                    <label>${k.label}</label>
-                    <div class="value-display ${!isKnown && !STATE.revealed ? 'hidden-ans' : (STATE.revealed && !isKnown ? 'revealed' : '')}">
-                        ${val}
-                    </div>
-                    <span class="unit">${k.unit}</span>
-                </div>`;
-            }).join('');
-        document.getElementById('periodDisplay').textContent = `T = ${(1000/STATE.all.f).toFixed(1)}ms`;
-        drawVisuals();
+function formatEngineerHTML(num, decimals = 2) {
+    if (num === 0) return "0.00";
+    let val = Math.abs(num);
+    let sign = num < 0 ? "-" : "";
+    
+    // Calcul de l'exposant multiple de 3
+    let exp = Math.floor(Math.log10(val));
+    let engExp = Math.floor(exp / 3) * 3;
+    
+    let mantissa = (val * Math.pow(10, -engExp)).toFixed(decimals);
+    
+    // Correction si l'arrondi fait basculer au millier supérieur
+    if (parseFloat(mantissa) >= 1000) {
+        mantissa = (parseFloat(mantissa) / 1000).toFixed(decimals);
+        engExp += 3;
     }
+    
+    // Si l'exposant est 0, on n'affiche pas la puissance de 10
+    if (engExp === 0) return `${sign}${mantissa}`;
+    
+    return `${sign}${mantissa} × 10<sup>${engExp}</sup>`;
+}
+
+function updateUI() {
+    const grid = document.getElementById('inputGrid');
+    grid.innerHTML = ALL_KEYS.map(k => {
+        const isKnown = STATE.triplet.includes(k.id);
+        const valRaw = STATE.all[k.id];
+        let displayVal;
+
+        // 1. Format Ingénieur (Multiple de 3) pour C et XC
+        if (k.id === "C" || k.id === "XC" || (Math.abs(valRaw) < 0.01 && valRaw !== 0)) {
+            displayVal = formatEngineerHTML(valRaw, 2);
+        } 
+        // 2. Cas spécifique du cos phi : 2 décimales pour la précision angulaire
+        else if (k.id === "cos_phi") {
+            displayVal = valRaw.toFixed(2);
+        }
+        // 3. Toutes les autres variables : Arrondi au dixième (1 décimale)
+        else {
+            displayVal = valRaw.toFixed(1);
+        }
+
+        return `
+            <div class="input-group ${isKnown ? 'given' : ''}">
+                <label>${k.label}</label>
+                <div class="value-display ${!isKnown && !STATE.revealed ? 'hidden-ans' : (STATE.revealed && !isKnown ? 'revealed' : '')}">
+                    ${displayVal}
+                </div>
+                <span class="unit">${k.unit}</span>
+            </div>`;
+    }).join('');
+    
+    document.getElementById('periodDisplay').textContent = `T = ${(1000/STATE.all.f).toFixed(1)}ms`;
+    drawVisuals();
+}
 
 function showHint() {
     const hintBox = document.getElementById('hintBox');

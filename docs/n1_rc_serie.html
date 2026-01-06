@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>RC Master Pro - Circuit Série</title>
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$']] },
+            options: { enableMenu: false },
+            startup: { ready: () => { MathJax.startup.defaultReady(); } }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --accent: #38bdf8;
+            --text: #f1f5f9; --muted: #94a3b8; --success: #22c55e;
+            --warn: #f43f5e; --induct: #f59e0b; --current: #f472b6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 15px; line-height: 1.4; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { 
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--card); padding: 15px 20px; border-radius: 12px; 
+            border: 1px solid #334155; margin-bottom: 20px;
+        }
+        .actions { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { 
+            flex: 1; padding: 12px; border-radius: 8px; border: none; 
+            cursor: pointer; font-weight: 700; transition: 0.3s; 
+            text-transform: uppercase;
+        }
+        .btn-gen { background: var(--accent); color: #0f172a; }
+        .btn-solve { background: var(--success); color: #0f172a; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); 
+            gap: 12px; margin-bottom: 25px; 
+        }
+        .input-group { 
+            background: var(--card); padding: 10px 14px; border-radius: 10px; 
+            border: 1px solid #334155; position: relative; min-height: 70px;
+        }
+        .input-group.given { border-color: var(--accent); border-width: 2px; }
+        .input-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+        .val-display { font-size: 1.1rem; font-weight: 700; color: white; }
+        .hidden-ans { filter: blur(8px); pointer-events: none; user-select: none; color: #94a3b8 !important; }
+        .revealed { color: var(--success) !important; filter: none !important; }
+        .unit { position: absolute; right: 10px; bottom: 10px; font-size: 0.7rem; color: var(--muted); font-style: italic; }
+        .visual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .canvas-box { background: #0b1324; border-radius: 15px; padding: 15px; border: 1px solid #334155; text-align: center; }
+        .canvas-box.full-width { grid-column: 1 / -1; }
+        canvas { width: 100%; height: auto; border-radius: 8px; }
+        h3 { font-size: 0.8rem; margin-bottom: 10px; color: var(--accent); text-transform: uppercase; }
+        .info-bar { background: #1a2b4e; padding: 8px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; color: var(--accent); border-left: 4px solid var(--accent); }
+        #solutionMethod { margin-top: 30px; background: #1e293b; padding: 25px; border-radius: 12px; border: 2px solid var(--success); display: none; margin-bottom: 30px; }
+        #hintBox { background: #2d3748; border-left: 4px solid var(--induct); padding: 15px; margin-bottom: 20px; border-radius: 8px; display: none; }
+        .method-step { margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1 style="font-size: 1.4rem;">RC Master <span style="color: var(--accent);">Pro</span> v1.3</h1>
+            <p style="font-size: 0.85rem; color: var(--muted);">Circuit RC Série - Données Aléatoires Complètes (f, C, S inclus)</p>
+        </div>
+    </header>
+
+    <div id="currentTriplet" class="info-bar">
+        Données fournies : <span id="tripletDisplay">-</span>
+    </div>
+
+    <div class="actions">
+        <button class="btn-gen" onclick="generateExercise()">Générer Nouvel Exercice</button>
+        <button id="btn-hint" style="background: var(--induct); color: #0f172a;" onclick="toggleHint()">Indice</button>
+        <button class="btn-solve" onclick="revealAnswers()">Voir Réponses & Méthode</button>
+    </div>
+
+    <div id="hintBox">
+        <h3 style="color: var(--induct); margin-top: 0;">💡 Indices de résolution</h3>
+        <div id="hintText" style="font-size: 0.95rem;"></div>
+    </div>
+
+    <div class="grid" id="inputGrid"></div>
+
+    <div id="solutionMethod">
+        <h2 style="color: var(--success); margin-bottom: 15px; font-size: 1.2rem;">📚 Étapes de calcul</h2>
+        <div id="stepsList"></div>
+    </div>
+
+    <div class="visual-grid">
+        <div class="canvas-box"><h3>Tensions [V]</h3><canvas id="fresnelU" width="300" height="250"></canvas></div>
+        <div class="canvas-box"><h3>Impédances [Ω]</h3><canvas id="fresnelZ" width="300" height="250"></canvas></div>
+        <div class="canvas-box"><h3>Puissances</h3><canvas id="fresnelS" width="300" height="250"></canvas></div>
+        <div class="canvas-box full-width">
+            <h3>Oscilloscope : u(t) [Bleu] & i(t) [Rose]</h3>
+            <canvas id="scopeCanvas" width="900" height="250"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CONFIG = {
+        // Liste de combinaisons de 4 variables qui permettent de tout résoudre
+        valid_quads: [
+            ["f", "C", "R", "U"], ["f", "C", "R", "I"], ["f", "XC", "R", "S"],
+            ["f", "C", "Z", "I"], ["f", "R", "phi", "U"], ["C", "XC", "R", "I"],
+            ["f", "C", "P", "Q"], ["XC", "R", "I", "U"], ["f", "C", "Ur", "UC"],
+            ["f", "C", "S", "cos_phi"], ["Z", "R", "f", "C"], ["P", "Q", "f", "C"]
+        ],
+        units: { f: "Hz", C: "F", U: "V", Ur: "V", UC: "V", I: "A", Z: "Ω", R: "Ω", XC: "Ω", P: "W", Q: "var", S: "VA", cos_phi: "", phi: "°" }
+    };
+
+    let currentValues = {};
+    let isRevealed = false;
+
+    function generateExercise() {
+        isRevealed = false;
+        document.getElementById('solutionMethod').style.display = 'none';
+        document.getElementById('hintBox').style.display = 'none';
+        
+        // 1. Valeurs de base aléatoires
+        const f = Math.floor(Math.random() * 450) + 50; // 50-500 Hz
+        const capMicro = Math.floor(Math.random() * 150) + 5; // 5-155 µF
+        const C = capMicro / 1000000;
+        const R = Math.floor(Math.random() * 150) + 10; 
+        
+        // 2. Physique du circuit
+        const XC = 1 / (2 * Math.PI * f * C);
+        const Z = Math.sqrt(R**2 + XC**2);
+        const I = (Math.random() * 5 + 0.1); 
+        
+        const Ur = R * I;
+        const UC = XC * I;
+        const U = Z * I;
+        const S = U * I;
+        const phi_rad = -Math.atan(XC / R);
+        const phi_deg = phi_rad * (180 / Math.PI);
+        const cos_phi = Math.cos(phi_rad);
+        const P = S * cos_phi;
+        const Q = -S * Math.sin(Math.abs(phi_rad));
+
+        const all = { f, C, U, Ur, UC, I, Z, R, XC, P, Q, S, cos_phi, phi: phi_deg };
+        
+        // 3. Choix d'un set de 4 données au hasard
+        const quadKeys = CONFIG.valid_quads[Math.floor(Math.random() * CONFIG.valid_quads.length)];
+        
+        const given = {};
+        quadKeys.forEach(k => { given[k] = all[k]; });
+
+        currentValues = { all, given, quadKeys };
+        renderUI();
+        drawVisuals();
+    }
+
+    function renderUI() {
+        const grid = document.getElementById('inputGrid');
+        grid.innerHTML = '';
+        document.getElementById('tripletDisplay').innerText = currentValues.quadKeys.join(", ");
+
+        Object.keys(CONFIG.units).forEach(key => {
+            const isGiven = currentValues.given.hasOwnProperty(key);
+            const val = currentValues.all[key];
+            
+            let displayVal;
+            if (key === 'C') displayVal = val.toExponential(2);
+            else if (key === 'cos_phi') displayVal = val.toFixed(3);
+            else if (key === 'phi') displayVal = val.toFixed(1);
+            else if (key === 'I') displayVal = val.toFixed(3);
+            else displayVal = val.toFixed(2);
+
+            grid.innerHTML += `
+                <div class="input-group ${isGiven ? 'given' : ''}">
+                    <label>${key.toUpperCase()}</label>
+                    <div class="val-display ${!isGiven ? 'hidden-ans' : ''}" id="val-${key}">
+                        ${displayVal}
+                    </div>
+                    <span class="unit">${CONFIG.units[key]}</span>
+                </div>
+            `;
+        });
+    }
+
+    function revealAnswers() {
+        isRevealed = true;
+        document.querySelectorAll('.val-display').forEach(el => el.classList.add('revealed'));
+        buildMethod();
+        document.getElementById('solutionMethod').style.display = 'block';
+    }
+
+function toggleHint() {
+    const hb = document.getElementById('hintBox');
+    const hintText = document.getElementById('hintText');
+    
+    // Inversion de l'affichage
+    hb.style.display = hb.style.display === 'none' ? 'block' : 'none';
+
+    if (hb.style.display === 'block') {
+        hintText.innerHTML = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed var(--induct);">
+            <div style="text-align: center;">$$Z = \\sqrt{R^2 + X_C^2}\\quad [\\Omega]$$</div>
+            <div style="text-align: center;">$$U = Z \\cdot I \\quad [V]$$</div>
+            <div style="text-align: center;">$$\\cos\\varphi = \\frac{R}{Z} = \\frac{P}{S}$$</div>
+            <div style="text-align: center;">$$X_C = \\frac{1}{2\\pi f C} \\quad [\\Omega]$$</div>
+            <div style="text-align: center;">$$S = U \\cdot I \\quad [VA]$$</div>
+            <div style="text-align: center;">$$P = R \\cdot I^2\\quad [W]$$</div>
+            <div style="text-align: center;">$$Q = X_C \\cdot I^2\\quad [var]$$</div>
+            <div style="text-align: center;">$$S = \\sqrt{P^2 + Q^2}\\quad [VA]$$</div>
+            <div style="text-align: center;">$$U = \\sqrt{U_R^2 + U_C^2}\\quad [V]$$</div>
+            <div style="text-align: center;">$$U_R = R \\cdot I\\quad [V]$$</div>
+        </div>
+        <p style="margin-top: 15px; font-style: italic; color: var(--muted); text-align: center;">
+            Identifiez les variables connues et isolez l'inconnue à l'aide de ces relations fondamentales.
+        </p>
+        `;
+        
+        // C'est cette ligne qui déclenche le rendu des formules
+        MathJax.typeset(); 
+    }
+}
+
+    function buildMethod() {
+        const list = document.getElementById('stepsList');
+        const v = currentValues.all;
+        
+        list.innerHTML = `
+            <div class="method-step">1. Réactance $X_C$ : ${v.XC.toFixed(2)} $\\Omega$ (calculée via $1/(2\\pi fC)$ ou $U_C/I$)</div>
+            <div class="method-step">2. Impédance $Z$ : $\\sqrt{R^2 + X_C^2} = ${v.Z.toFixed(2)} \\Omega$</div>
+            <div class="method-step">3. Courant efficace $I$ : ${v.I.toFixed(3)} A</div>
+            <div class="method-step">4. Puissances : $S = ${v.S.toFixed(2)} VA$, $P = ${v.P.toFixed(2)} W$</div>
+            <div class="method-step">5. Fréquence : $f = \\frac{1}{2\\pi C X_C} = ${v.f.toFixed(1)} Hz$</div>
+        `;
+        MathJax.typeset();
+    }
+
+    // --- Fonctions de dessin conservées (Fresnel + Scope) ---
+function drawVisuals() {
+    const drawTri = (id, hKey, vKey, hypKey, units) => {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 300, 220);
+
+        const h = currentValues.all[hKey], 
+              v = Math.abs(currentValues.all[vKey]), 
+              hyp = currentValues.all[hypKey];
+        
+        const scale = 110 / Math.max(h, v, hyp || 1);
+        const x0 = 45, y0 = 175, x1 = x0 + h * scale, y1 = y0 - v * scale;
+
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#22c55e'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke(); 
+        ctx.strokeStyle = '#f59e0b'; ctx.beginPath(); ctx.moveTo(x1, y0); ctx.lineTo(x1, y1); ctx.stroke(); 
+        ctx.strokeStyle = '#38bdf8'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); 
+
+        ctx.fillStyle = "white"; 
+        ctx.font = "bold 10px Segoe UI"; 
+        
+        const getMod = (key, val, unit) => (currentValues.given.hasOwnProperty(key) || isRevealed) 
+            ? `${key} = ${Math.round(val * 10) / 10} [${unit}]` 
+            : `${key} = ??? [${unit}]`;
+
+        ctx.textAlign = "center";
+        ctx.fillText(getMod(hKey, h, units[0]), x0 + (h * scale) / 2, y0 + 20); 
+        ctx.textAlign = "left";
+        ctx.fillText(getMod(vKey, v, units[1]), x1 + 10, y0 - (v * scale) / 2); 
+        ctx.textAlign = "center";
+        ctx.fillText(getMod(hypKey, hyp, units[2]), x0 + (h * scale) / 3, y1 - 12); 
+    };
+
+    drawTri('fresnelU', 'Ur', 'UC', 'U', ['V', 'V', 'V']);
+    drawTri('fresnelZ', 'R', 'XC', 'Z', ['Ω', 'Ω', 'Ω']);
+    drawTri('fresnelS', 'P', 'Q', 'S', ['W', 'var', 'VA']);
+
+    const scope = document.getElementById('scopeCanvas');
+    if (!scope) {
+        console.error("Canvas 'scopeCanvas' non trouvé!");
+        return;
+    }
+    
+    const sCtx = scope.getContext('2d');
+    const w = scope.width, h = scope.height, midY = h / 2;
+    sCtx.clearRect(0, 0, w, h);
+
+    // Fonction pour convertir degrés en radians
+    const rad = (deg) => deg * Math.PI / 180;
+
+    const centerX = 100, fresnelRadius = 60, tangentX = centerX + fresnelRadius;
+    const scopeWidth = w - tangentX - 40;
+    
+    // Récupérer l'angle phi (positif pour circuit RC série)
+    let phiDeg = currentValues.all.phi || 0;
+    if (phiDeg > 0) phiDeg = -phiDeg; // S'assurer que phi est négatif pour RC
+    
+    const phiRad = rad(phiDeg);
+    const freq = (2 * Math.PI * 2) / scopeWidth;
+    const T = (2 * Math.PI) / freq; // Période en pixels
+
+    const drawLatexArrow = (ctx, x1, y1, x2, y2, size = 10, color = null) => {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        ctx.save();
+        ctx.fillStyle = color || ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - size * Math.cos(angle - Math.PI / 8), y2 - size * Math.sin(angle - Math.PI / 8));
+        ctx.lineTo(x2 - size * Math.cos(angle + Math.PI / 8), y2 - size * Math.sin(angle + Math.PI / 8));
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    };
+
+    const drawVectorLabel = (ctx, x, y, text, color, position = "above") => {
+        ctx.fillStyle = color;
+        ctx.font = "italic bold 16px serif";
+        const lx = x - 25, ly = (position === "above") ? y - 12 : y + 25;
+        ctx.fillText(text, lx, ly);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(lx, ly - 15);
+        ctx.lineTo(lx + 12, ly - 15);
+        ctx.stroke();
+        drawLatexArrow(ctx, lx, ly - 15, lx + 14, ly - 15, 5);
+    };
+
+    // ========== AXES ==========
+    sCtx.strokeStyle = "#475569";
+    sCtx.fillStyle = "#475569";
+    sCtx.lineWidth = 1;
+    
+    // Axe horizontal
+    sCtx.beginPath();
+    sCtx.moveTo(20, midY);
+    sCtx.lineTo(w - 20, midY);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, w - 30, midY, w - 15, midY, 8);
+    sCtx.font = "14px Segoe UI";
+    sCtx.fillText("t [s]", w - 30, midY + 20);
+    
+    // Axe vertical pour le diagramme de Fresnel
+    sCtx.beginPath();
+    sCtx.moveTo(centerX, 40);
+    sCtx.lineTo(centerX, h - 40);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, centerX, 45, centerX, 30, 8);
+    sCtx.fillText("j", centerX - 15, 35);
+
+    // ========== DIAGRAMME DE FRESNEL ==========
+    // Cercle de Fresnel
+    sCtx.strokeStyle = "#334155";
+    sCtx.lineWidth = 1;
+    sCtx.beginPath();
+    sCtx.arc(centerX, midY, fresnelRadius, 0, Math.PI * 2);
+    sCtx.stroke();
+
+    // Vecteur U (Tension - référence 0°)
+    const uX = centerX + fresnelRadius;
+    sCtx.strokeStyle = "#38bdf8";
+    sCtx.lineWidth = 3;
+    sCtx.beginPath();
+    sCtx.moveTo(centerX, midY);
+    sCtx.lineTo(uX, midY);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, centerX, midY, uX, midY, 10, "#38bdf8");
+    drawVectorLabel(sCtx, uX, midY, "U", "#38bdf8", "above");
+
+    // Vecteur I (Courant en avance - angle positif vers le haut)
+    // Pour RC série: phi < 0, donc I est en avance (vers le haut)
+    const iX = centerX + Math.cos(phiRad) * (fresnelRadius * 0.7);
+    const iY = midY - Math.sin(phiRad) * (fresnelRadius * 0.7);
+    sCtx.strokeStyle = "#f472b6";
+    sCtx.lineWidth = 3;
+    sCtx.beginPath();
+    sCtx.moveTo(centerX, midY);
+    sCtx.lineTo(iX, iY);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, centerX, midY, iX, iY, 10, "#f472b6");
+    drawVectorLabel(sCtx, iX, iY, "I", "#f472b6", "below");
+
+    // Arc d'angle phi
+    sCtx.strokeStyle = "#94a3b8";
+    sCtx.lineWidth = 1;
+    sCtx.beginPath();
+    sCtx.arc(centerX, midY, fresnelRadius * 0.85, 0, -phiRad, phiRad > 0);
+    sCtx.stroke();
+    
+    // Label de l'angle phi
+    sCtx.fillStyle = "#94a3b8";
+    sCtx.font = "bold 14px Segoe UI";
+    sCtx.fillText(`φ = ${phiDeg.toFixed(1)}°`, centerX + 30, midY - 20);
+
+    // ========== OSCILLOSCOPE ==========
+    // Ligne de séparation
+    sCtx.strokeStyle = "#64748b";
+    sCtx.lineWidth = 1;
+    sCtx.beginPath();
+    sCtx.moveTo(tangentX - 10, 30);
+    sCtx.lineTo(tangentX - 10, h - 30);
+    sCtx.stroke();
+
+    // Axe vertical pour oscilloscope
+    sCtx.strokeStyle = "#475569";
+    sCtx.beginPath();
+    sCtx.moveTo(tangentX, 40);
+    sCtx.lineTo(tangentX, h - 40);
+    sCtx.stroke();
+    sCtx.fillText("u(t), i(t)", tangentX - 30, 35);
+
+    // Grille pour oscilloscope
+    sCtx.strokeStyle = "#334155";
+    sCtx.lineWidth = 0.5;
+    for (let i = 0; i < 5; i++) {
+        const y = 40 + i * ((h - 80) / 4);
+        sCtx.beginPath();
+        sCtx.moveTo(tangentX, y);
+        sCtx.lineTo(w - 20, y);
+        sCtx.stroke();
+    }
+
+    // ========== CALCUL DES POINTS DE PASSAGE PAR ZÉRO ==========
+    // Pour u(t) = sin(ωt) => passage par zéro à ωt = 0, π, 2π...
+    // Premier passage par zéro après t=0 pour u(t)
+    const uZeroX = tangentX + (Math.PI / freq); // À ωt = π
+    
+    // Pour i(t) = sin(ωt + |φ|) => passage par zéro à ωt + |φ| = 0, π, 2π...
+    // Premier passage par zéro après t=0 pour i(t)
+    const iZeroX = tangentX + ((Math.PI - Math.abs(phiRad)) / freq);
+    
+    // Le déphasage Δt est la différence entre ces points
+    const deltaX = iZeroX - uZeroX; // i(t) passe par zéro avant u(t)
+    const phaseLineX = uZeroX; // On place la ligne verticale sur u(t)
+
+    // Signal de tension U (bleu)
+    sCtx.strokeStyle = "#38bdf8";
+    sCtx.lineWidth = 2;
+    sCtx.beginPath();
+    for (let x = 0; x <= scopeWidth; x += 2) {
+        const y = midY - Math.sin(x * freq) * fresnelRadius;
+        x === 0 ? sCtx.moveTo(tangentX + x, y) : sCtx.lineTo(tangentX + x, y);
+    }
+    sCtx.stroke();
+    
+    // Signal de courant I (rose) - EN AVANCE (déphasage négatif)
+    sCtx.strokeStyle = "#f472b6";
+    sCtx.lineWidth = 2;
+    sCtx.beginPath();
+    for (let x = 0; x <= scopeWidth; x += 2) {
+        const y = midY - Math.sin(x * freq + Math.abs(phiRad)) * (fresnelRadius * 0.7);
+        x === 0 ? sCtx.moveTo(tangentX + x, y) : sCtx.lineTo(tangentX + x, y);
+    }
+    sCtx.stroke();
+
+    // ========== MARQUAGE DES PASSAGES PAR ZÉRO ==========
+    // Marquer le passage par zéro de u(t)
+    sCtx.fillStyle = "#38bdf8";
+    sCtx.beginPath();
+    sCtx.arc(uZeroX, midY, 6, 0, Math.PI * 2);
+    sCtx.fill();
+    sCtx.strokeStyle = "#38bdf8";
+    sCtx.lineWidth = 2;
+    sCtx.beginPath();
+    sCtx.arc(uZeroX, midY, 10, 0, Math.PI * 2);
+    sCtx.stroke();
+    
+    // Marquer le passage par zéro de i(t)
+    sCtx.fillStyle = "#f472b6";
+    sCtx.beginPath();
+    sCtx.arc(iZeroX, midY, 6, 0, Math.PI * 2);
+    sCtx.fill();
+    sCtx.strokeStyle = "#f472b6";
+    sCtx.lineWidth = 2;
+    sCtx.beginPath();
+    sCtx.arc(iZeroX, midY, 10, 0, Math.PI * 2);
+    sCtx.stroke();
+    
+    // Ajouter des labels pour les passages par zéro
+    sCtx.fillStyle = "#38bdf8";
+    sCtx.font = "bold 12px Segoe UI";
+    sCtx.textAlign = "center";
+    sCtx.fillText("u=0", uZeroX, midY - 20);
+    
+    sCtx.fillStyle = "#f472b6";
+    sCtx.fillText("i=0", iZeroX, midY + 25);
+
+    // ========== MARQUE DE DÉPHASAGE ENTRE LES PASSAGES PAR ZÉRO ==========
+    // Tracer une ligne verticale pointillée au premier passage par zéro de u(t)
+    sCtx.strokeStyle = "#10b981";
+    sCtx.lineWidth = 2;
+    sCtx.setLineDash([5, 5]); // Ligne pointillée
+    sCtx.beginPath();
+    sCtx.moveTo(phaseLineX, midY - fresnelRadius - 10);
+    sCtx.lineTo(phaseLineX, midY + fresnelRadius + 10);
+    sCtx.stroke();
+    sCtx.setLineDash([]); // Réinitialiser à ligne continue
+    
+    // Ajouter une double flèche horizontale pour montrer Δt entre les passages par zéro
+    sCtx.strokeStyle = "#10b981";
+    sCtx.lineWidth = 2;
+    
+    // Flèche du haut
+    const arrowYTop = midY - fresnelRadius - 15;
+    sCtx.beginPath();
+    sCtx.moveTo(iZeroX, arrowYTop);
+    sCtx.lineTo(uZeroX, arrowYTop);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, iZeroX, arrowYTop, uZeroX, arrowYTop, 6, "#10b981");
+    drawLatexArrow(sCtx, uZeroX, arrowYTop, iZeroX, arrowYTop, 6, "#10b981");
+    
+    // Flèche du bas
+    const arrowYBottom = midY + fresnelRadius + 15;
+    sCtx.beginPath();
+    sCtx.moveTo(iZeroX, arrowYBottom);
+    sCtx.lineTo(uZeroX, arrowYBottom);
+    sCtx.stroke();
+    drawLatexArrow(sCtx, iZeroX, arrowYBottom, uZeroX, arrowYBottom, 6, "#10b981");
+    drawLatexArrow(sCtx, uZeroX, arrowYBottom, iZeroX, arrowYBottom, 6, "#10b981");
+    
+    // Ajouter le label Δt
+    sCtx.fillStyle = "#10b981";
+    sCtx.font = "bold 14px Segoe UI";
+    sCtx.textAlign = "center";
+    const middleX = (iZeroX + uZeroX) / 2;
+    sCtx.fillText("Δt", middleX, arrowYTop - 8);
+    sCtx.fillText("Δt", middleX, arrowYBottom + 20);
+    
+    // Ajouter la relation entre φ et Δt
+    sCtx.fillStyle = "#94a3b8";
+    sCtx.font = "italic 12px Segoe UI";
+    sCtx.fillText(`Δt = (φ/360°) × T`, w - 100, midY + 50);
+    sCtx.fillText(`φ = ${phiDeg.toFixed(1)}°`, w - 100, midY + 70);
+
+    // Légendes
+    sCtx.textAlign = "left";
+    sCtx.fillStyle = "#f472b6";
+    sCtx.font = "bold 14px Segoe UI";
+    sCtx.fillText("i(t) en avance", w - 50, midY - fresnelRadius * 0.7 - 10 + 15);
+    
+    sCtx.fillStyle = "#38bdf8";
+    sCtx.fillText("u(t)", w - 50, midY - fresnelRadius - 10);
+    
+    // Restaurer l'alignement du texte
+    sCtx.textAlign = "left";
+}
+    window.onload = generateExercise;
+
+</script>
+
+</body>
+</html>
