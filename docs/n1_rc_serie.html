@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RC Master Pro v12.8 — Calculateur de Circuit RC Série & Diagrammes de Fresnel (vectoriels)</title>
+    <meta name="description" content="Outil professionnel gratuit pour résoudre les circuits RC en série. Calculez l'impédance, le déphasage, les puissances et visualisez les diagrammes de Fresnel et l'oscilloscope en temps réel.">
+    <meta name="keywords" content="circuit RC, électricité, impédance, Fresnel, oscilloscope, génie électrique, calcul déphasage, puissance active réactive, condensateur">
+    <meta name="author" content="OM 2026">
+    <meta name="robots" content="index, follow">
+    <link rel="icon" type="png" href="16BB.svg">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            },
+            options: {
+                enableMenu: false
+            },
+            startup: {
+                ready: () => {
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --accent: #38bdf8;
+            --text: #f1f5f9; --muted: #94a3b8; --success: #22c55e;
+            --warn: #f43f5e; --capacit: #a855f7; --current: #f472b6;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 15px; line-height: 1.4; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        header { 
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--card); padding: 15px 20px; border-radius: 12px; 
+            border: 1px solid #334155; margin-bottom: 20px;
+        }
+
+        .actions { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { 
+            flex: 1; padding: 12px; border-radius: 8px; border: none; 
+            cursor: pointer; font-weight: 700; transition: 0.3s; 
+            text-transform: uppercase;
+        }
+        .btn-gen { background: var(--accent); color: #0f172a; }
+        .btn-solve { background: var(--success); color: #0f172a; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            gap: 12px; margin-bottom: 25px; 
+        }
+        .input-group { 
+            background: var(--card); padding: 10px 14px; border-radius: 10px; 
+            border: 1px solid #334155; position: relative;
+        }
+        .input-group.given { border-color: var(--accent); border-width: 2px; }
+        .input-group label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+        .input-group input { width: 100%; background: transparent; border: none; color: white; font-size: 1.1rem; font-weight: 700; outline: none; }
+
+        .hidden-ans { filter: blur(8px); pointer-events: none; user-select: none; color: #94a3b8 !important; }
+        .revealed { color: var(--success) !important; filter: none !important; text-shadow: 0 0 10px rgba(34, 197, 94, 0.2); }
+        .unit { position: absolute; right: 10px; bottom: 10px; font-size: 0.7rem; color: var(--muted); font-style: italic; }
+
+        .visual-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .canvas-box { background: #0b1324; border-radius: 15px; padding: 15px; border: 1px solid #334155; text-align: center; }
+        .canvas-box.full-width { grid-column: 1 / -1; }
+        canvas { width: 100%; height: auto; border-radius: 8px; }
+        h3 { font-size: 0.8rem; margin-bottom: 10px; color: var(--accent); text-transform: uppercase; }
+        
+        .legend { display: flex; justify-content: center; gap: 15px; font-size: 0.8rem; margin-top: 5px; }
+        .dot-u { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+        .dot-i { width: 8px; height: 8px; background: var(--current); border-radius: 50%; }
+        .info-bar { background: #1a2b4e; padding: 8px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.85rem; color: var(--accent); border-left: 4px solid var(--accent); }
+
+        #solutionMethod {
+            margin-top: 30px; background: #1e293b; padding: 25px;
+            border-radius: 12px; border: 2px solid var(--success);
+            display: none; margin-bottom: 30px;
+        }
+        .method-step { 
+            margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; 
+            background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; border-left: 4px solid var(--success);
+        }
+        .step-num { background: var(--success); color: #0f172a; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; }
+        
+        #hintBox {
+            background: #2d3748; border-left: 4px solid var(--capacit); 
+            padding: 15px; margin-bottom: 20px; border-radius: 8px; display: none;
+        }
+        #tripletDisplay {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        #unknownsDisplay {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+    </style>
+    <script type="application/ld+json">
+    {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "RC Master Pro",
+    "operatingSystem": "Web",
+    "applicationCategory": "EducationalApplication",
+    "description": "Calculateur interactif pour circuits électriques RC en série avec tracés de Fresnel.",
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+    }
+    }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div>
+            <h1 style="font-size: 1.4rem;">RC Master <span style="color: var(--accent);">Pro</span> v12.8</h1>
+            <p style="font-size: 0.85rem; color: var(--muted);">Résolveur Universel RC Série (par OM 2026.01.03)</p>
+        </div>
+    </header>
+
+    <div id="currentTriplet" class="info-bar">
+        <strong>Données d'entrée :</strong>
+        <span id="tripletDisplay" style="margin-left: 10px;">-</span>
+        <br>
+        <strong>Inconnues :</strong>
+        <span id="unknownsDisplay" style="margin-left: 10px; color: var(--warn);">-</span>
+    </div>
+    <div class="actions">
+        <button class="btn-gen" onclick="generateExercise()">Générer Nouveau Cas</button>
+        <button id="btn-hint" style="background: var(--capacit); color: #0f172a;" onclick="showHint()">Indice de résolution</button>
+        <button class="btn-solve" onclick="revealAnswers()">Vérifier / Révéler</button>
+    </div>
+
+    <div id="hintBox">
+        <h3 style="color: var(--capacit); margin-top: 0;">💡 Stratégie suggérée</h3>
+        <div id="hintText" style="font-size: 0.95rem;"></div>
+    </div>
+
+    <div class="grid" id="inputGrid"></div>
+
+    <div id="solutionMethod">
+        <h2 style="color: var(--success); margin-bottom: 10px; font-size: 1.4rem; border-bottom: 1px solid var(--success); padding-bottom: 10px;">
+            📚 Guide de Résolution Détaillé
+        </h2>
+        <div id="stepsList"></div>
+    </div>
+
+    <div class="visual-grid">
+        <div class="canvas-box"><h3>Tensions [V]</h3><canvas id="fresnelU" width="300" height="220"></canvas></div>
+        <div class="canvas-box"><h3>Impédances [Ω]</h3><canvas id="fresnelZ" width="300" height="220"></canvas></div>
+        <div class="canvas-box"><h3>Puissances</h3><canvas id="fresnelS" width="300" height="220"></canvas></div>
+        <div class="canvas-box full-width">
+            <h3>Oscilloscope : u(t) & i(t)</h3>
+            <canvas id="scopeCanvas" width="900" height="300"></canvas>
+            <div class="legend">
+                <span><div class="dot-u"></div> u(t)</span>
+                <span><div class="dot-i"></div> i(t)</span>
+                <span id="periodDisplay" style="color: var(--muted); margin-left: 20px;">T = ...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ALL_KEYS = [
+        {id:"f", label:"Fréquence", unit:"Hz"}, {id:"C", label:"Capacité C", unit:"F"},
+        {id:"U", label:"Tension Source U", unit:"V"}, {id:"I", label:"Courant I", unit:"A"}, 
+        {id:"R", label:"Résistance R", unit:"Ω"}, {id:"XC", label:"Réactance XC", unit:"Ω"}, 
+        {id:"Z", label:"Impédance Z", unit:"Ω"}, {id:"UR", label:"Tension UR", unit:"V"}, 
+        {id:"UC", label:"Tension UC", unit:"V"}, {id:"P", label:"Puissance P", unit:"W"}, 
+        {id:"Q", label:"Puissance Q", unit:"var"}, {id:"S", label:"Puissance S", unit:"VA"}, 
+        {id:"cos_phi", label:"cos φ", unit:"-"}, {id:"phi", label:"Angle de déphasage φ", unit:"°"}
+    ];
+    
+    const VARIABLE_BANKS = ["f", "C", "U", "I", "R", "XC", "Z", "UR", "UC", "P", "Q", "S", "cos_phi", "phi"];
+    let STATE = { all: {}, triplet: [], revealed: false };
+
+    const rad = (d) => d * Math.PI / 180;
+    const deg = (r) => r * 180 / Math.PI;
+
+    function computeAll(K) {
+        let o = { ...K };
+        
+        // 1. Assurer que toutes les valeurs numériques sont des nombres
+        Object.keys(o).forEach(key => {
+            if (typeof o[key] === 'number') {
+                o[key] = parseFloat(o[key].toFixed(10));
+            }
+        });
+        
+        // 2. XC = 1/(2πfC) (priorité à cette relation)
+        if (o.f && o.C) o.XC = 1 / (2 * Math.PI * o.f * o.C);
+        else if (o.f && o.XC) o.C = 1 / (2 * Math.PI * o.f * o.XC);
+        else if (o.XC && o.C) o.f = 1 / (2 * Math.PI * o.XC * o.C);
+        
+        // 3. Triangle des impédances Z² = R² + XC²
+        if (o.R && o.XC) o.Z = Math.sqrt(o.R*o.R + o.XC*o.XC);
+        else if (o.Z && o.R) o.XC = Math.sqrt(Math.max(0, o.Z*o.Z - o.R*o.R));
+        else if (o.Z && o.XC) o.R = Math.sqrt(Math.max(0, o.Z*o.Z - o.XC*o.XC));
+        
+        // 4. Angle φ et cos φ (φ est NEGATIF en RC)
+        if (o.R && o.XC) o.phi = -deg(Math.atan2(o.XC, o.R));
+        if (o.R && o.Z && o.Z !== 0) o.cos_phi = o.R / o.Z;
+        if (o.phi) o.cos_phi = Math.cos(rad(o.phi));
+        if (o.cos_phi) o.phi = -deg(Math.acos(o.cos_phi));
+        
+        // 5. Loi d'Ohm U = Z·I
+        if (o.Z && o.I) o.U = o.Z * o.I;
+        else if (o.U && o.Z) o.I = o.U / o.Z;
+        else if (o.U && o.I) o.Z = o.U / o.I;
+        
+        // 6. Tensions partielles
+        if (o.I && o.R) o.UR = o.I * o.R;
+        if (o.I && o.XC) o.UC = o.I * o.XC;
+        if (o.UR && o.UC) o.U = Math.sqrt(o.UR*o.UR + o.UC*o.UC);
+        
+        // 7. Puissances (Q est négative pour les condensateurs)
+        if (o.U && o.I) o.S = o.U * o.I;
+        if (o.R && o.I) o.P = o.R * o.I * o.I;
+        if (o.XC && o.I) o.Q = -(o.XC * o.I * o.I); // Négatif pour RC
+        
+        if (o.P && o.Q) o.S = Math.sqrt(o.P*o.P + o.Q*o.Q);
+        if (o.S && o.cos_phi) o.P = o.S * o.cos_phi;
+        if (o.S && o.P && o.S !== 0) o.cos_phi = o.P / o.S;
+        if (o.S && o.P) o.Q = -Math.sqrt(Math.max(0, o.S*o.S - o.P*o.P)); // Négatif
+        
+        // 8. Calculs inverses
+        if (o.P && o.I && o.I !== 0) o.R = o.P / (o.I * o.I);
+        if (o.Q && o.I && o.I !== 0) o.XC = -o.Q / (o.I * o.I); // Inversion de signe
+        if (o.S && o.U && o.U !== 0) o.I = o.S / o.U;
+        
+        // 9. Vérifications finales et arrondis
+        ALL_KEYS.forEach(k => {
+            if (o[k.id] !== undefined && typeof o[k.id] === 'number') {
+                // Arrondir selon le type de variable
+                if (['f', 'U', 'I', 'R', 'XC', 'Z', 'UR', 'UC', 'P', 'Q', 'S'].includes(k.id)) {
+                    o[k.id] = Math.round(o[k.id] * 100) / 100;
+                } else if (k.id === 'C') {
+                    o[k.id] = parseFloat(o[k.id].toFixed(6)); // Capacité en microfarads
+                } else if (k.id === 'phi') {
+                    o[k.id] = Math.round(o[k.id] * 10) / 10;
+                } else if (k.id === 'cos_phi') {
+                    o[k.id] = Math.round(o[k.id] * 1000) / 1000;
+                }
+            }
+        });
+        
+        return o;
+    }
+
+    function generateExercise() {
+        document.getElementById('solutionMethod').style.display = 'none';
+        document.getElementById('hintBox').style.display = 'none';
+        
+        // Générer les 4 variables de base (C en microfarads)
+        const baseValues = {
+            f: Math.floor(Math.random() * 400) + 50,
+            C: parseFloat((Math.random() * 100 + 10).toFixed(6)) * 1e-6, // µF
+            U: Math.floor(Math.random() * 400) + 50,
+            R: Math.floor(Math.random() * 300) + 20
+        };
+        
+        // Calculer toutes les valeurs
+        const allValues = computeAll(baseValues);
+        
+        // Sélectionner 4 variables au hasard
+        const availableKeys = [];
+        ALL_KEYS.forEach(k => {
+            if (allValues[k.id] !== undefined && !isNaN(allValues[k.id])) {
+                availableKeys.push(k.id);
+            }
+        });
+        
+        // Mélanger et prendre 4
+        const shuffled = [...availableKeys].sort(() => Math.random() - 0.5);
+        const triplet = shuffled.slice(0, 4);
+        
+        // Si on n'a pas 4 variables, compléter
+        while (triplet.length < 4) {
+            const defaults = ['f', 'C', 'U', 'R'];
+            for (let def of defaults) {
+                if (!triplet.includes(def)) {
+                    triplet.push(def);
+                    break;
+                }
+            }
+        }
+        
+        // Calculer les inconnues (toutes les variables qui ne sont pas dans triplet)
+        const unknowns = ALL_KEYS
+            .filter(k => !triplet.includes(k.id))
+            .map(k => k.id);
+        
+        // Mettre à jour l'état
+        STATE.all = allValues;
+        STATE.triplet = triplet;
+        STATE.revealed = false;
+        
+        // Formater l'affichage des données d'entrée (version compacte)
+        const tripletDisplay = triplet.map(id => {
+            const key = ALL_KEYS.find(k => k.id === id);
+            let value;
+            if (id === "C") {
+                value = (allValues[id] * 1e6).toFixed(2) + " µF"; // Afficher en µF
+            } else if (id === "phi") {
+                value = Math.round(allValues[id] * 10) / 10;
+            } else {
+                value = Math.round(allValues[id] * 100) / 100;
+            }
+            return `${id} = ${value} [${key.unit}]`;
+        }).join('  |  ');
+        
+        // Formater l'affichage des inconnues (version compacte)
+        const unknownsDisplay = unknowns.join(', ');
+        
+        // Mettre à jour l'affichage
+        document.getElementById('tripletDisplay').textContent = tripletDisplay;
+        document.getElementById('unknownsDisplay').textContent = unknownsDisplay;
+        
+        updateUI();
+    }
+
+    function updateUI() {
+        const grid = document.getElementById('inputGrid');
+        grid.innerHTML = ALL_KEYS.map(k => {
+            const isKnown = STATE.triplet.includes(k.id);
+            let val;
+            if (k.id === "C") {
+                val = (STATE.all[k.id] * 1e6).toFixed(2) + " µF"; // Afficher en µF
+            } else if (k.id === "phi") {
+                val = Math.round(STATE.all[k.id] * 10) / 10;
+            } else {
+                val = Math.round(STATE.all[k.id] * 100) / 100;
+            }
+            return `
+                <div class="input-group ${isKnown ? 'given' : ''}">
+                    <label>${k.label}</label>
+                    <input type="text" value="${val}" class="${!isKnown && !STATE.revealed ? 'hidden-ans' : (STATE.revealed && !isKnown ? 'revealed' : '')}" readonly>
+                    <span class="unit">${k.unit}</span>
+                </div>`;
+        }).join('');
+        document.getElementById('periodDisplay').textContent = `T = ${(1000/STATE.all.f).toFixed(1)}ms`;
+        drawVisuals();
+    }
+
+    function showHint() {
+        const hintBox = document.getElementById('hintBox');
+        const hintText = document.getElementById('hintText');
+        hintBox.style.display = 'block';
+
+        // Bloc de formules de base (non transformées)
+        const formulaBlock = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px dashed var(--capacit);">
+                <div style="text-align: center;">$$Z = \\sqrt{R^2 + X_C^2}\\quad [\\Omega]$$</div>
+                <div style="text-align: center;">$$U = Z \\cdot I \\quad [V]$$</div>
+                <div style="text-align: center;">$$\\cos\\varphi = \\frac{R}{Z} = \\frac{P}{S} = \\frac{U_R}{U}$$</div>
+                <div style="text-align: center;">$$X_C = \\frac{1}{2\\pi f C} \\quad [\\Omega]$$</div>
+                <div style="text-align: center;">$$S = U \\cdot I \\quad [V\\!\\!A]$$</div>
+                <div style="text-align: center;">$$P = R \\cdot I^2\\quad [W]$$</div>
+                <div style="text-align: center;">$$Q = -X_C \\cdot I^2\\quad [var]$$</div>
+                <div style="text-align: center;">$$S = \\sqrt{P^2 + Q^2}\\quad [V\\!\\!A]$$</div>
+                <div style="text-align: center;">$$U = \\sqrt{U_R^2 + U_C^2}\\quad [V]$$</div>
+                <div style="text-align: center;">$$U_R = R \\cdot I\\quad [V]$$</div>
+            </div>
+            <p style="margin-top: 15px; font-style: italic; color: var(--muted); text-align: center;">
+                Identifiez les variables connues et isolez l'inconnue à l'aide de ces relations fondamentales.
+            </p>
+        `;
+
+        hintText.innerHTML = formulaBlock;
+        
+        if (window.MathJax) {
+            MathJax.typesetPromise([hintText]);
+        }
+        
+        hintBox.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function revealAnswers() {
+        document.getElementById('unknownsDisplay').textContent = "Toutes résolues ✓";
+        document.getElementById('unknownsDisplay').style.color = "var(--success)";
+        
+        document.getElementById('hintBox').style.display = 'none';
+        STATE.revealed = true;
+        updateUI();
+
+        const solDiv = document.getElementById('solutionMethod');
+        const stepsList = document.getElementById('stepsList');
+        solDiv.style.display = 'block';
+        
+        let html = "";
+        let known = [...STATE.triplet]; 
+        let stepIdx = 1;
+
+        const logic = [
+            // --- 1. TRIGONOMÉTRIE ET FACTEUR DE PUISSANCE ---
+            { req: ['phi'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\cos(\\varphi) \\quad [-]" },
+            { req: ['cos_phi'], res: 'phi', t: "Angle de déphasage", f: "\\varphi = -\\arccos(\\cos\\varphi) \\quad [^\\circ]" },
+
+            // --- 2. LOI D'OHM ET PUISSANCES DE BASE ---
+            { req: ['P', 'U', 'cos_phi'], res: 'I', t: "Intensité", f: "I = \\frac{P}{U \\cdot \\cos\\varphi} \\quad [A]" },
+            { req: ['U', 'Z'], res: 'I', t: "Intensité efficace (Loi d'Ohm)", f: "I = \\frac{U}{Z} \\quad [A]" },
+            { req: ['S', 'I'], res: 'U', t: "Tension Source", f: "U = \\frac{S}{I} \\quad [V]" },
+            { req: ['S', 'U'], res: 'I', t: "Intensité efficace", f: "I = \\frac{S}{U} \\quad [A]" },
+            { req: ['U', 'I'], res: 'S', t: "Puissance apparente", f: "S = U \\cdot I \\quad [V\\!\\!A]" },
+
+            // --- 3. TRIANGLE DES PUISSANCES ---
+            { req: ['S', 'cos_phi'], res: 'P', t: "Puissance active", f: "P = S \\cdot \\cos\\varphi \\quad [W]" },
+            { req: ['P', 'S'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{P}{S} \\quad [-]" },
+            { req: ['P', 'S'], res: 'Q', t: "Puissance réactive", f: "Q = -\\sqrt{S^2 - P^2} \\quad [var]" },
+            { req: ['P', 'Q'], res: 'S', t: "Puissance apparente", f: "S = \\sqrt{P^2 + Q^2} \\quad [V\\!\\!A]" },
+            { req: ['S', 'Q'], res: 'P', t: "Puissance active", f: "P = \\sqrt{S^2 - Q^2} \\quad [W]" },
+
+            // --- 4. IMPÉDANCES ET COMPOSANTS (f, C, R, XC, Z) ---
+            { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
+            { req: ['P', 'I'], res: 'R', t: "Résistance", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
+            { req: ['Q', 'I'], res: 'XC', t: "Réactance capacitive", f: "X_C = -\\frac{Q}{I^2} \\quad [\\Omega]" },
+            { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
+            { req: ['Z', 'R'], res: 'XC', t: "Réactance capacitive", f: "X_C = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
+            { req: ['R', 'XC'], res: 'Z', t: "Impédance totale", f: "Z = \\sqrt{R^2 + X_C^2} \\quad [\\Omega]" },
+            
+            // Formules pour la fréquence et la capacité
+            { req: ['XC', 'C'], res: 'f', t: "Fréquence du réseau", f: "f = \\frac{1}{2\\pi X_C C} \\quad [Hz]" },
+            { req: ['XC', 'f'], res: 'C', t: "Capacité", f: "C = \\frac{1}{2\\pi f X_C} \\quad [F]" },
+            { req: ['f', 'C'], res: 'XC', t: "Réactance capacitive", f: "X_C = \\frac{1}{2\\pi f C} \\quad [\\Omega]" },
+
+            // --- 5. TENSIONS PARTIELLES ---
+            { req: ['I', 'R'], res: 'UR', t: "Tension Résistive", f: "U_R = R \\cdot I \\quad [V]" },
+            { req: ['I', 'XC'], res: 'UC', t: "Tension Capacitive", f: "U_C = X_C \\cdot I \\quad [V]" },
+            { req: ['UR', 'UC'], res: 'U', t: "Tension Source", f: "U = \\sqrt{U_R^2 + U_C^2} \\quad [V]" },
+            { req: ['U', 'UR'], res: 'UC', t: "Tension Capacitive", f: "U_C = \\sqrt{U^2 - U_R^2} \\quad [V]" },
+            { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{R}{Z} \\quad [-]" },
+            { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos\\varphi = \\frac{U_R}{U} \\quad [-]" }
+        ];
+
+        let foundNew;
+        do {
+            foundNew = false;
+            logic.forEach(s => {
+                if(!known.includes(s.res) && s.req.every(r => known.includes(r))) {
+                    html += `
+                        <div class="method-step">
+                            <div class="step-num">${stepIdx++}</div>
+                            <div style="flex:1">
+                                <b style="color: #64ffda;">${s.t} :</b>
+                                <div style="background: #111b2d; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 3px solid #64ffda; color: #e6f1ff; font-size: 1.1em;">
+                                    $$ ${s.f} $$
+                                </div>
+                            </div>
+                        </div>`;
+                    known.push(s.res);
+                    foundNew = true;
+                }
+            });
+        } while(foundNew);
+
+        stepsList.innerHTML = html;
+        if (window.MathJax) MathJax.typesetPromise([stepsList]);
+    }
+
+    function drawVisuals() {
+        const drawTri = (id, hKey, vKey, hypKey, units) => {
+            const canvas = document.getElementById(id);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, 300, 220);
+
+            const h = STATE.all[hKey], v = Math.abs(STATE.all[vKey]), hyp = STATE.all[hypKey];
+            // Calcul du scale pour que le triangle tienne bien dans le canvas
+            const scale = 110 / Math.max(h, v, hyp || 1);
+            const x0 = 45, y0 = 175, x1 = x0 + h * scale, y1 = y0 - v * scale;
+
+            // Fonction interne pour gérer l'affichage masqué ou révélé
+            const getMod = (key, val, unit) => (STATE.triplet.includes(key) || STATE.revealed) 
+                ? `${key} = ${Math.round(val * 10) / 10} [${unit}]` 
+                : `${key} = ??? [${unit}]`;
+
+            // 1. Dessin des segments avec leurs couleurs
+            ctx.lineWidth = 3;
+            
+            // Base (verte)
+            ctx.strokeStyle = '#22c55e'; 
+            ctx.beginPath(); 
+            ctx.moveTo(x0, y0); 
+            ctx.lineTo(x1, y0); 
+            ctx.stroke();
+            
+            // Hauteur (violet pour condensateur)
+            ctx.strokeStyle = '#a855f7'; 
+            ctx.beginPath(); 
+            ctx.moveTo(x1, y0); 
+            ctx.lineTo(x1, y1); 
+            ctx.stroke();
+            
+            // Hypoténuse (bleue)
+            ctx.strokeStyle = '#38bdf8'; 
+            ctx.beginPath(); 
+            ctx.moveTo(x0, y0); 
+            ctx.lineTo(x1, y1); 
+            ctx.stroke();
+
+            // 2. Calcul de l'angle de l'hypoténuse pour le texte parallèle
+            const angleHyp = Math.atan2(y1 - y0, x1 - x0);
+            
+            // 3. Position du texte sur l'hypoténuse (au milieu + un peu décalé)
+            const midHypX = x0 + (x1 - x0) * 0.5;
+            const midHypY = y0 + (y1 - y0) * 0.5;
+            
+            // Décalage perpendiculaire pour ne pas superposer la ligne
+            const offset = 15;
+            const textX = midHypX + offset * Math.sin(angleHyp);
+            const textY = midHypY - offset * Math.cos(angleHyp);
+
+            // 4. Affichage des labels avec couleurs correspondantes
+            ctx.font = "bold 10px Segoe UI";
+            
+            // Texte horizontal (base) - VERT
+            ctx.fillStyle = '#22c55e';
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillText(getMod(hKey, h, units[0]), x0 + (h * scale) / 2, y0 + 10);
+            
+            // Texte vertical (hauteur) - VIOLET
+            ctx.fillStyle = '#a855f7';
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(getMod(vKey, STATE.all[vKey], units[1]), x1 + 8, y0 - (v * scale) / 2);
+            
+            // Texte hypoténuse - BLEU et PARALLELE
+            ctx.save(); // Sauvegarder l'état du contexte
+            
+            // Positionner et pivoter le contexte pour l'hypoténuse
+            ctx.translate(textX, textY);
+            ctx.rotate(angleHyp);
+            
+            ctx.fillStyle = '#38bdf8';
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(getMod(hypKey, hyp, units[2]), 0, 0);
+            
+            ctx.restore(); // Restaurer l'état du contexte
+        };
+
+        // Appels pour les 3 triangles avec leurs unités respectives
+        drawTri('fresnelU', 'UR', 'UC', 'U', ['V', 'V', 'V']);
+        drawTri('fresnelZ', 'R', 'XC', 'Z', ['Ω', 'Ω', 'Ω']);
+        drawTri('fresnelS', 'P', 'Q', 'S', ['W', 'var', 'VA']);
+
+        // --- Partie Oscilloscope & Fresnel ---
+        const scope = document.getElementById('scopeCanvas');
+        const sCtx = scope.getContext('2d');
+        const w = scope.width, h = scope.height, midY = h / 2;
+
+        sCtx.clearRect(0, 0, w, h);
+
+        // Configuration Géométrique
+        const centerX = 100; 
+        const fresnelRadius = 60; 
+        const tangentX = centerX + fresnelRadius; // Point t=0
+        const scopeWidth = w - tangentX - 40;
+        const phiRad = rad(STATE.all.phi || 0);
+        const freq = (2 * Math.PI * 2) / scopeWidth; // 2 périodes
+
+        // --- 1. FONCTIONS UTILITAIRES POUR FLÈCHES ET LABELS ---
+        const drawLatexArrow = (ctx, x1, y1, x2, y2, size = 10, color = null) => {
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            
+            // Sauvegarder l'état du contexte
+            ctx.save();
+            
+            // Appliquer la couleur si fournie, sinon utiliser la couleur de trait actuelle
+            if (color) {
+                ctx.fillStyle = color;
+            } else {
+                ctx.fillStyle = ctx.strokeStyle; // hérite de la couleur du trait
+            }
+            
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - size * Math.cos(angle - Math.PI / 8), y2 - size * Math.sin(angle - Math.PI / 8));
+            ctx.lineTo(x2 - size * Math.cos(angle + Math.PI / 8), y2 - size * Math.sin(angle + Math.PI / 8));
+            ctx.fill();
+            
+            // Restaurer l'état du contexte
+            ctx.restore();
+        };
+
+        const drawVectorLabel = (ctx, x, y, text, color, position = "above") => {
+            ctx.fillStyle = color;
+            ctx.font = "italic bold 16px serif";
+            
+            // Ajustement position : I en dessous, U au dessus
+            const lx = x - 25; 
+            const ly = (position === "above") ? y - 12 : y + 25;
+            
+            ctx.fillText(text, lx, ly);
+            
+            // Flèche vectorielle sur la lettre (statique)
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(lx, ly - 15); ctx.lineTo(lx + 12, ly - 15);
+            ctx.stroke();
+            drawLatexArrow(ctx, lx, ly - 15, lx + 14, ly - 15, 5);
+        };
+
+        // --- 2. DESSIN DES AXES ---
+        sCtx.strokeStyle = "#475569";
+        sCtx.fillStyle = "#475569";
+        sCtx.lineWidth = 1;
+
+        // Axe Horizontal (t)
+        sCtx.beginPath(); sCtx.moveTo(20, midY); sCtx.lineTo(w - 20, midY); sCtx.stroke();
+        drawLatexArrow(sCtx, w - 30, midY, w - 15, midY);
+        sCtx.font = "12px Arial";
+        sCtx.fillText("t [s]", w - 30, midY + 20);
+
+        // Axe Vertical Central (Cercle) avec flèche vers le haut
+        sCtx.beginPath(); sCtx.moveTo(centerX, h - 20); sCtx.lineTo(centerX, 20); sCtx.stroke();
+        drawLatexArrow(sCtx, centerX, 30, centerX, 15);
+
+        // Axe Vertical Tangent (t=0) avec flèche et labels
+        sCtx.lineWidth = 2;
+        sCtx.beginPath(); sCtx.moveTo(tangentX, h - 20); sCtx.lineTo(tangentX, 20); sCtx.stroke();
+        drawLatexArrow(sCtx, tangentX, 30, tangentX, 15);
+        sCtx.fillText("u(t), i(t)", tangentX + 8, 25);
+
+        // --- 3. DIAGRAMME DE FRESNEL ---
+        sCtx.strokeStyle = "#334155";
+        sCtx.lineWidth = 1;
+        sCtx.beginPath(); sCtx.arc(centerX, midY, fresnelRadius, 0, Math.PI * 2); sCtx.stroke();
+
+        // Nouveau tracé du Sens Trigonométrique ω (arc avec flèche nette)
+        sCtx.strokeStyle = "#94a3b8";
+        sCtx.beginPath();
+        const startA = -Math.PI/2.2, endA = -Math.PI/1.6;
+        sCtx.arc(centerX, midY, fresnelRadius + 18, startA, endA, true);
+        sCtx.stroke();
+        // Flèche au bout de l'arc omega
+        const ox = centerX + (fresnelRadius+18) * Math.cos(endA);
+        const oy = midY + (fresnelRadius+18) * Math.sin(endA);
+        drawLatexArrow(sCtx, ox + 5, oy - 2, ox, oy, 7);
+        sCtx.font = "italic 16px serif";
+        sCtx.fillText("ω", ox - 15, oy - 5);
+
+        // Vecteur U (Référence à 0°)
+        const uX = centerX + fresnelRadius;
+        sCtx.strokeStyle = "#38bdf8";
+        sCtx.lineWidth = 3;
+        sCtx.beginPath(); sCtx.moveTo(centerX, midY); sCtx.lineTo(uX, midY); sCtx.stroke();
+        drawLatexArrow(sCtx, centerX, midY, uX, midY, 10, "#38bdf8");
+        drawVectorLabel(sCtx, uX, midY, "U", "#38bdf8", "above");
+
+        // Vecteur I (Déphasé AVANCE de courant en RC, φ négatif)
+        const iX = centerX + Math.cos(-phiRad) * (fresnelRadius * 0.7);
+        const iY = midY - Math.sin(-phiRad) * (fresnelRadius * 0.7);
+        sCtx.strokeStyle = "#f472b6";
+        sCtx.lineWidth = 3;
+        sCtx.beginPath(); sCtx.moveTo(centerX, midY); sCtx.lineTo(iX, iY); sCtx.stroke();
+        drawLatexArrow(sCtx, centerX, midY, iX, iY, 10, "#f472b6");    
+        // I est placé en dessous de sa flèche comme demandé
+        drawVectorLabel(sCtx, iX, iY, "I", "#f472b6", "below");
+
+        // Variable varphi (Grand format, Italique)
+        sCtx.strokeStyle = "#a855f7";
+        sCtx.lineWidth = 1.5;
+        sCtx.beginPath();
+        sCtx.arc(centerX, midY, 35, 0, -phiRad, phiRad > 0); // φ négatif
+        sCtx.stroke();
+        sCtx.fillStyle = "#a855f7";
+        sCtx.font = "italic bold 24px serif"; 
+        sCtx.fillText("φ", centerX + 45 * Math.cos(-phiRad/2), midY - 45 * Math.sin(-phiRad/2));
+
+        // --- 4. SIGNAUX ET PHI SUR AXE HORIZONTAL ---
+        const drawSignal = (color, amp, phase) => {
+            sCtx.beginPath();
+            sCtx.strokeStyle = color;
+            sCtx.lineWidth = 2;
+            for (let x = 0; x <= scopeWidth; x++) {
+                const y = midY - Math.sin(x * freq - phase) * amp;
+                x === 0 ? sCtx.moveTo(tangentX + x, y) : sCtx.lineTo(tangentX + x, y);
+            }
+            sCtx.stroke();
+        };
+
+        drawSignal("#38bdf8", fresnelRadius, 0); 
+        drawSignal("#f472b6", fresnelRadius * 0.7, phiRad);
+
+        // Déphasage φ sous l'axe au passage par zéro
+        const zeroU = Math.PI / freq; 
+        const zeroI = (Math.PI + phiRad) / freq; 
+        const yBase = midY + 40;
+
+        sCtx.strokeStyle = "#a855f7";
+        sCtx.setLineDash([4, 2]);
+        sCtx.beginPath();
+        sCtx.moveTo(tangentX + zeroU, midY); sCtx.lineTo(tangentX + zeroU, yBase + 10);
+        sCtx.moveTo(tangentX + zeroI, midY); sCtx.lineTo(tangentX + zeroI, yBase + 10);
+        sCtx.stroke();
+        sCtx.setLineDash([]);
+
+        // Flèche φ double sens sous l'axe
+        sCtx.lineWidth = 1.5;
+        sCtx.beginPath();
+        sCtx.moveTo(tangentX + zeroU, yBase); sCtx.lineTo(tangentX + zeroI, yBase);
+        sCtx.stroke();
+        drawLatexArrow(sCtx, tangentX + zeroI - 5, yBase, tangentX + zeroI, yBase, 6);
+        drawLatexArrow(sCtx, tangentX + zeroU + 5, yBase, tangentX + zeroU, yBase, 6);
+        sCtx.font = "italic bold 20px serif";
+        sCtx.fillText("φ", tangentX + (zeroU + zeroI)/2 - 8, yBase + 22);
+    }
+    window.onload = generateExercise;
+</script>
+</body>
+</html>
