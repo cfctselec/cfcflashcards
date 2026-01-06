@@ -95,6 +95,16 @@
             background: #2d3748; border-left: 4px solid var(--induct); 
             padding: 15px; margin-bottom: 20px; border-radius: 8px; display: none;
         }
+        #tripletDisplay {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        #unknownsDisplay {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
     </style>
     <script type="application/ld+json">
     {
@@ -122,10 +132,16 @@
         </div>
     </header>
 
-    <div id="currentTriplet" class="info-bar">
+    <!-- <div id="currentTriplet" class="info-bar">
         Données d'entrée (aléatoires) : <span id="tripletDisplay">-</span>
+    </div> -->
+    <div id="currentTriplet" class="info-bar">
+        <strong>Données d'entrée :</strong>
+        <span id="tripletDisplay" style="margin-left: 10px;">-</span>
+        <br>
+        <strong>Inconnues :</strong>
+        <span id="unknownsDisplay" style="margin-left: 10px; color: var(--warn);">-</span>
     </div>
-
     <div class="actions">
         <button class="btn-gen" onclick="generateExercise()">Générer Nouveau Cas</button>
         <button id="btn-hint" style="background: var(--induct); color: #0f172a;" onclick="showHint()">Indice de résolution</button>
@@ -170,9 +186,13 @@
         {id:"Z", label:"Impédance Z", unit:"Ω"}, {id:"UR", label:"Tension UR", unit:"V"}, 
         {id:"UL", label:"Tension UL", unit:"V"}, {id:"P", label:"Puissance P", unit:"W"}, 
         {id:"Q", label:"Puissance Q", unit:"var"}, {id:"S", label:"Puissance S", unit:"VA"}, 
-        {id:"cos_phi", label:"cos φ", unit:"-"}, {id:"phi", label:"Déphasage φ", unit:"°"}
+        {id:"cos_phi", label:"cos φ", unit:"-"}, {id:"phi", label:"Angle de déphasage φ", unit:"°"}
     ];
-
+    // Fonction utilitaire pour obtenir le nom complet d'une variable
+    function getFullLabel(id) {
+        const key = ALL_KEYS.find(k => k.id === id);
+        return key ? key.label : id;
+    }
     const VARIABLE_BANKS = ["f", "L", "U", "I", "R", "XL", "Z", "UR", "UL", "P", "Q", "S", "cos_phi", "phi"];
     let STATE = { all: {}, triplet: [], revealed: false };
 
@@ -180,109 +200,141 @@
     const deg = (r) => r * 180 / Math.PI;
 
         
-    function computeAll(K) {
-        let o = { ...K };
-        for(let i=0; i<15; i++) {
-            if (o.XL && o.L && o.L > 0) o.f = o.XL / (2 * Math.PI * o.L);
-            if (o.f && o.L) o.XL = 2 * Math.PI * o.f * o.L;
-            if (o.XL && o.f && o.f > 0) o.L = o.XL / (2 * Math.PI * o.f);
-            if (o.R && o.XL) { o.Z = Math.sqrt(o.R**2 + o.XL**2); o.phi = deg(Math.atan2(o.XL, o.R)); o.cos_phi = o.R / o.Z; }
-            if (o.Z && o.cos_phi) { o.R = o.Z * o.cos_phi; o.XL = Math.sqrt(Math.max(0, o.Z**2 - o.R**2)); o.phi = deg(Math.acos(o.cos_phi)); }
-            if (o.I && o.Z) o.U = o.I * o.Z;
-            if (o.U && o.Z) o.I = o.U / o.Z;
-            if (o.U && o.I) o.Z = o.U / o.I;
-            if (o.I && o.R) o.UR = o.I * o.R;
-            if (o.I && o.XL) o.UL = o.I * o.XL;
-            if (o.UR && o.UL) { o.U = Math.sqrt(o.UR**2 + o.UL**2); o.phi = deg(Math.atan2(o.UL, o.UR)); o.cos_phi = o.UR/o.U;}
-            if (o.P && o.Q) { o.S = Math.sqrt(o.P**2 + o.Q**2); o.cos_phi = o.P / o.S; o.phi = deg(Math.acos(o.cos_phi)); }
-            if (o.U && o.I) o.S = o.U * o.I;
-            if (o.R && o.I) o.P = o.R * (o.I**2);
-            if (o.XL && o.I) o.Q = o.XL * (o.I**2);
-
-            if (o.P && o.I) o.R = o.P / (o.I**2);
-            if (o.Q && o.I) o.XL = o.Q / (o.I**2);
-            if (o.S && o.I) o.Z = o.S / (o.I**2);
-            if (o.S && o.U) o.I = o.S / o.U;
-            if (o.P && o.U && o.cos_phi) o.I = o.P / (o.U * o.cos_phi);
-            if (o.P && o.S) o.cos_phi = o.P / o.S;
-            if (o.phi) o.cos_phi = Math.cos(rad(o.phi));            
+function computeAll(K) {
+    let o = { ...K };
+    
+    // 1. Assurer que toutes les valeurs numériques sont des nombres
+    Object.keys(o).forEach(key => {
+        if (typeof o[key] === 'number') {
+            o[key] = parseFloat(o[key].toFixed(10));
         }
-        return o;
-    }
+    });
+    
+    // 2. XL = 2πfL (priorité à cette relation)
+    if (o.f && o.L) o.XL = 2 * Math.PI * o.f * o.L;
+    else if (o.f && o.XL) o.L = o.XL / (2 * Math.PI * o.f);
+    else if (o.XL && o.L) o.f = o.XL / (2 * Math.PI * o.L);
+    
+    // 3. Triangle des impédances Z² = R² + XL²
+    if (o.R && o.XL) o.Z = Math.sqrt(o.R*o.R + o.XL*o.XL);
+    else if (o.Z && o.R) o.XL = Math.sqrt(Math.max(0, o.Z*o.Z - o.R*o.R));
+    else if (o.Z && o.XL) o.R = Math.sqrt(Math.max(0, o.Z*o.Z - o.XL*o.XL));
+    
+    // 4. Angle φ et cos φ
+    if (o.R && o.XL) o.phi = deg(Math.atan2(o.XL, o.R));
+    if (o.R && o.Z && o.Z !== 0) o.cos_phi = o.R / o.Z;
+    if (o.phi) o.cos_phi = Math.cos(rad(o.phi));
+    if (o.cos_phi) o.phi = deg(Math.acos(o.cos_phi));
+    
+    // 5. Loi d'Ohm U = Z·I
+    if (o.Z && o.I) o.U = o.Z * o.I;
+    else if (o.U && o.Z) o.I = o.U / o.Z;
+    else if (o.U && o.I) o.Z = o.U / o.I;
+    
+    // 6. Tensions partielles
+    if (o.I && o.R) o.UR = o.I * o.R;
+    if (o.I && o.XL) o.UL = o.I * o.XL;
+    if (o.UR && o.UL) o.U = Math.sqrt(o.UR*o.UR + o.UL*o.UL);
+    
+    // 7. Puissances
+    if (o.U && o.I) o.S = o.U * o.I;
+    if (o.R && o.I) o.P = o.R * o.I * o.I;
+    if (o.XL && o.I) o.Q = o.XL * o.I * o.I;
+    
+    if (o.P && o.Q) o.S = Math.sqrt(o.P*o.P + o.Q*o.Q);
+    if (o.S && o.cos_phi) o.P = o.S * o.cos_phi;
+    if (o.S && o.P && o.S !== 0) o.cos_phi = o.P / o.S;
+    if (o.S && o.P) o.Q = Math.sqrt(Math.max(0, o.S*o.S - o.P*o.P));
+    
+    // 8. Calculs inverses
+    if (o.P && o.I && o.I !== 0) o.R = o.P / (o.I * o.I);
+    if (o.Q && o.I && o.I !== 0) o.XL = o.Q / (o.I * o.I);
+    if (o.S && o.U && o.U !== 0) o.I = o.S / o.U;
+    
+    // 9. Vérifications finales et arrondis
+    ALL_KEYS.forEach(k => {
+        if (o[k.id] !== undefined && typeof o[k.id] === 'number') {
+            // Arrondir selon le type de variable
+            if (['f', 'U', 'I', 'R', 'XL', 'Z', 'UR', 'UL', 'P', 'Q', 'S'].includes(k.id)) {
+                o[k.id] = Math.round(o[k.id] * 100) / 100;
+            } else if (k.id === 'L') {
+                o[k.id] = parseFloat(o[k.id].toFixed(4));
+            } else if (k.id === 'phi') {
+                o[k.id] = Math.round(o[k.id] * 10) / 10;
+            } else if (k.id === 'cos_phi') {
+                o[k.id] = Math.round(o[k.id] * 1000) / 1000;
+            }
+        }
+    });
+    
+    return o;
+}
 
 
 function generateExercise() {
     document.getElementById('solutionMethod').style.display = 'none';
     document.getElementById('hintBox').style.display = 'none';
     
-    let success = false;
-    while (!success) {
-        // --- NOUVELLE LOGIQUE DE SÉLECTION ---
-        let pool = [...VARIABLE_BANKS];
-        let triplet = [];
-
-        // On force l'inclusion d'une puissance ou cos_phi pour varier
-        const powers = ["P", "Q", "S", "cos_phi"];
-        let forceKey = powers[Math.floor(Math.random() * powers.length)];
-        triplet.push(forceKey);
-        pool.splice(pool.indexOf(forceKey), 1);
-
-        // On complète avec 3 autres variables totalement au hasard
-        for(let i=0; i<3; i++) {
-            let idx = Math.floor(Math.random() * pool.length);
-            triplet.push(pool.splice(idx, 1)[0]);
+    // Générer les 4 variables de base
+    const baseValues = {
+        f: Math.floor(Math.random() * 400) + 50,
+        L: parseFloat((Math.random() * 0.5 + 0.01).toFixed(4)),
+        U: Math.floor(Math.random() * 400) + 50,
+        R: Math.floor(Math.random() * 300) + 20
+    };
+    
+    // Calculer toutes les valeurs
+    const allValues = computeAll(baseValues);
+    
+    // Sélectionner 4 variables au hasard
+    const availableKeys = [];
+    ALL_KEYS.forEach(k => {
+        if (allValues[k.id] !== undefined && !isNaN(allValues[k.id])) {
+            availableKeys.push(k.id);
         }
-
-        // --- GÉNÉRATION DE VALEURS ULTRA-ALÉATOIRES ---
-        const seed = {
-            f: Math.floor(Math.random() * 400) + 10,       // 10 à 410 Hz
-            L: Math.random() * 0.8 + 0.001,               // 1mH à 800mH
-            U: Math.floor(Math.random() * 990) + 10,      // 10V à 1000V
-            R: Math.floor(Math.random() * 490) + 10       // 10Ω à 500Ω
-        };
-
-        const fullRef = computeAll(seed);
-        let testKnown = {};
-        triplet.forEach(k => testKnown[k] = fullRef[k]);
-
-        const result = computeAll(testKnown);
-        
-        // Vérification de la résolvabilité
-        if (ALL_KEYS.every(k => result[k.id] !== undefined && !isNaN(result[k.id]) && isFinite(result[k.id]))) {
-            STATE.all = result; 
-            STATE.triplet = triplet; 
-            STATE.revealed = false; 
-            success = true;
+    });
+    
+    // Mélanger et prendre 4
+    const shuffled = [...availableKeys].sort(() => Math.random() - 0.5);
+    const triplet = shuffled.slice(0, 4);
+    
+    // Si on n'a pas 4 variables, compléter
+    while (triplet.length < 4) {
+        const defaults = ['f', 'L', 'U', 'R'];
+        for (let def of defaults) {
+            if (!triplet.includes(def)) {
+                triplet.push(def);
+                break;
+            }
         }
     }
     
-    document.getElementById('tripletDisplay').textContent = STATE.triplet.join(' | ');
+    // Calculer les inconnues (toutes les variables qui ne sont pas dans triplet)
+    const unknowns = ALL_KEYS
+        .filter(k => !triplet.includes(k.id))
+        .map(k => k.id);
+    
+    // Mettre à jour l'état
+    STATE.all = allValues;
+    STATE.triplet = triplet;
+    STATE.revealed = false;
+    
+    // Formater l'affichage des données d'entrée (version compacte)
+    const tripletDisplay = triplet.map(id => {
+        const key = ALL_KEYS.find(k => k.id === id);
+        const value = id === "L" ? allValues[id].toFixed(4) : Math.round(allValues[id]*100)/100;
+        return `${id} = ${value} [${key.unit}]`;
+    }).join('  |  ');
+    
+    // Formater l'affichage des inconnues (version compacte)
+    const unknownsDisplay = unknowns.join(', ');
+    
+    // Mettre à jour l'affichage
+    document.getElementById('tripletDisplay').textContent = tripletDisplay;
+    document.getElementById('unknownsDisplay').textContent = unknownsDisplay;
+    
     updateUI();
 }
-    // function generateExercise() {
-    //     document.getElementById('solutionMethod').style.display = 'none';
-    //     document.getElementById('hintBox').style.display = 'none';
-        
-    //     let success = false;
-    //     while (!success) {
-    //         let triplet = [];
-    //         let pool = [...VARIABLE_BANKS];
-    //         for(let i=0; i<4; i++) {
-    //             let idx = Math.floor(Math.random() * pool.length);
-    //             triplet.push(pool.splice(idx, 1)[0]);
-    //         }
-    //         const seed = { f: 50, L: 0.1 + Math.random()*0.3, U: 230, R: 40 + Math.random()*60 };
-    //         const fullRef = computeAll(seed);
-    //         let testKnown = {};
-    //         triplet.forEach(k => testKnown[k] = fullRef[k]);
-    //         const result = computeAll(testKnown);
-    //         if (ALL_KEYS.every(k => result[k.id] !== undefined && !isNaN(result[k.id]))) {
-    //             STATE.all = result; STATE.triplet = triplet; STATE.revealed = false; success = true;
-    //         }
-    //     }
-    //     document.getElementById('tripletDisplay').textContent = STATE.triplet.join(' | ');
-    //     updateUI();
-    // }
 
     function updateUI() {
         const grid = document.getElementById('inputGrid');
@@ -333,9 +385,18 @@ function showHint() {
     hintBox.scrollIntoView({ behavior: 'smooth' });
 }
 function revealAnswers() {
+    // Masquer l'affichage des inconnues puisqu'elles sont maintenant connues
+    document.getElementById('unknownsDisplay').textContent = "Toutes résolues ✓";
+    document.getElementById('unknownsDisplay').style.color = "var(--success)";
+    
+    document.getElementById('hintBox').style.display = 'none';
+    STATE.revealed = true;
+    updateUI();
+
     document.getElementById('hintBox').style.display = 'none'; // Masquer l'indice
     STATE.revealed = true;
     updateUI();
+
     const solDiv = document.getElementById('solutionMethod');
     const stepsList = document.getElementById('stepsList');
     solDiv.style.display = 'block';
@@ -410,126 +471,92 @@ function revealAnswers() {
     if (window.MathJax) MathJax.typesetPromise([stepsList]);
 }
 
-// function revealAnswers() {
-//     STATE.revealed = true;
-//     updateUI();
-//     const solDiv = document.getElementById('solutionMethod');
-//     const stepsList = document.getElementById('stepsList');
-//     solDiv.style.display = 'block';
-    
-//     let html = "";
-//     let known = [...STATE.triplet]; // Ex: ["U", "P", "cos_phi"]
-//     let stepIdx = 1;
-
-//     // Base de connaissance complète pour circuit RL série
-//     const logic = [
-//         // --- Impédance et Composants ---
-//         { req: ['f', 'L'], res: 'XL', t: "Réactance inductive", f: "X_L = 2\\pi f L \\,[\\Omega]" },
-//         { req: ['R', 'XL'], res: 'Z', t: "Impédance totale", f: "Z = \\sqrt{R^2 + X_L^2}\\,[\\Omega]" },
-//         { req: ['Z', 'R'], res: 'XL', t: "Réactance inductive", f: "X_L = \\sqrt{Z^2 - R^2}\\,[\\Omega]" },
-//         { req: ['Z', 'XL'], res: 'R', t: "Résistance", f: "R = \\sqrt{Z^2 - X_L^2}\\,[\\Omega]" },
-
-//         // --- Loi d'Ohm ---
-//         { req: ['U', 'Z'], res: 'I', t: "Courant efficace", f: "I = \\frac{U}{Z}\\,[A]" },
-//         { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I}\\,[\\Omega]" },
-//         { req: ['I', 'Z'], res: 'U', t: "Tension totale", f: "U = Z \\cdot I\\,[V]" },
-//         { req: ['I', 'R'], res: 'UR', t: "Tension aux bornes de R", f: "U_R = R \\cdot I\\,[V]" },
-//         { req: ['I', 'XL'], res: 'UL', t: "Tension aux bornes de L", f: "U_L = X_L \\cdot I\\,[V]" },
-//         { req: ['U', 'UR'], res: 'UL', t: "Tension aux bornes de L", f: "U_L = \\sqrt{U^2 - U_R^2}\\,[V]" },
-//         { req: ['U', 'UL'], res: 'UR', t: "Tension aux bornes de R", f: "U_R = \\sqrt{U^2 - U_L^2}\\,[V]" },
-//         { req: ['UR', 'UL'], res: 'U', t: "Tension totale", f: "U = \\sqrt{U_R^2 + U_L^2}\\,[V]" },
-
-//         // --- Trigonométrie (phi et cos phi) ---
-//         { req: ['R', 'Z'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos(\\varphi) = \\frac{R}{Z}" },
-//         { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance", f: "R = Z \\cdot \\cos(\\varphi)\\,[\\Omega]" },
-//         { req: ['cos_phi'], res: 'phi', t: "Déphasage", f: "\\varphi = \\arccos(\\cos \\varphi)\\,[^o]" },
-//         { req: ['phi'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos \\varphi = \\cos(\\varphi)" },
-//         { req: ['R', 'XL'], res: 'phi', t: "Déphasage", f: "\\varphi = \\arctan\\left(\\frac{X_L}{R}\\right)\\,[^o]" },
-//         { req: ['UR', 'U'], res: 'cos_phi', t: "Facteur de puissance", f: "\\cos(\\varphi) = \\frac{U_R}{U}" },
-
-//         // --- Puissances ---
-//         { req: ['U', 'I', 'cos_phi'], res: 'P', t: "Puissance active", f: "P = U \\cdot I \\cdot \\cos(\\varphi)\\,[W]" },
-//         { req: ['P', 'Q'], res: 'S', t: "Puissance apparente", f: "S = \\sqrt{P^2 + Q^2}\\,[V\\!\\!A]" },
-//         { req: ['U', 'I'], res: 'S', t: "Puissance apparente", f: "S = U \\cdot I\\,[V\\!\\!A]" },
-//         { req: ['S', 'cos_phi'], res: 'P', t: "Puissance active", f: "P = S \\cdot \\cos(\\varphi)\\,[W]" },
-//         { req: ['P', 'cos_phi'], res: 'S', t: "Puissance apparente", f: "S = \\frac{P}{\\cos \\varphi}\\,[V\\!\\!A]" },
-//         { req: ['P', 'I'], res: 'R', t: "Résistance (via P)", f: "R = \\frac{P}{I^2}\\,[\\Omega]" },
-//         { req: ['Q', 'I'], res: 'XL', t: "Réactance (via Q)", f: "X_L = \\frac{Q}{I^2}\\,[\\Omega]" }
-//     ];
-
-//     let added = true;
-//     while(added) {
-//         added = false;
-//         logic.forEach(s => {
-//             // Si le résultat n'est pas encore connu MAIS que tous les prérequis le sont
-//             if(!known.includes(s.res) && s.req.every(r => known.includes(r))) {
-//                 html += `
-//                     <div class="method-step">
-//                         <div class="step-num">${stepIdx++}</div>
-//                         <div style="flex:1">
-//                             <b style="color: #64ffda;">${s.t} :</b>
-//                             <div style="background: #111b2d; padding: 12px; margin: 8px 0; border-radius: 8px; border-left: 3px solid #64ffda; color: #e6f1ff; font-size: 1.1em;">
-//                                 $$ ${s.f} $$
-//                             </div>
-//                         </div>
-//                     </div>`;
-//                 known.push(s.res);
-//                 added = true;
-//             }
-//         });
-//     }
-
-//     stepsList.innerHTML = html || "<p>Calcul direct effectué.</p>";
-    
-//     // Déclenchement du rendu MathJax
-//     if (window.MathJax) {
-//         MathJax.typesetPromise([stepsList]).catch((err) => console.log(err));
-//     }
-    
-//     solDiv.scrollIntoView({ behavior: 'smooth' });
-// }
-
 function drawVisuals() {
-    const drawTri = (id, hKey, vKey, hypKey, units) => {
-        const canvas = document.getElementById(id);
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, 300, 220);
+const drawTri = (id, hKey, vKey, hypKey, units) => {
+    const canvas = document.getElementById(id);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 300, 220);
 
-        const h = STATE.all[hKey], v = STATE.all[vKey], hyp = STATE.all[hypKey];
-        // Calcul du scale pour que le triangle tienne bien dans le canvas
-        const scale = 110 / Math.max(h, v, hyp || 1);
-        const x0 = 45, y0 = 175, x1 = x0 + h * scale, y1 = y0 - v * scale;
+    const h = STATE.all[hKey], v = STATE.all[vKey], hyp = STATE.all[hypKey];
+    // Calcul du scale pour que le triangle tienne bien dans le canvas
+    const scale = 110 / Math.max(h, v, hyp || 1);
+    const x0 = 45, y0 = 175, x1 = x0 + h * scale, y1 = y0 - v * scale;
 
-        // Dessin des segments
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#22c55e'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.stroke(); // Base
-        ctx.strokeStyle = '#f59e0b'; ctx.beginPath(); ctx.moveTo(x1, y0); ctx.lineTo(x1, y1); ctx.stroke(); // Hauteur
-        ctx.strokeStyle = '#38bdf8'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); // Hypoténuse
+    // Fonction interne pour gérer l'affichage masqué ou révélé
+    const getMod = (key, val, unit) => (STATE.triplet.includes(key) || STATE.revealed) 
+        ? `${key} = ${Math.round(val * 10) / 10} [${unit}]` 
+        : `${key} = ??? [${unit}]`;
 
-        // Style du texte
-        ctx.fillStyle = "white"; 
-        ctx.font = "bold 10px Segoe UI"; 
-        
-        // Fonction interne pour gérer l'affichage masqué ou révélé
-        const getMod = (key, val, unit) => (STATE.triplet.includes(key) || STATE.revealed) 
-            ? `${key} = ${Math.round(val * 10) / 10} [${unit}]` 
-            : `${key} = ??? [${unit}]`;
+    // 1. Dessin des segments avec leurs couleurs
+    ctx.lineWidth = 3;
+    
+    // Base (verte)
+    ctx.strokeStyle = '#22c55e'; 
+    ctx.beginPath(); 
+    ctx.moveTo(x0, y0); 
+    ctx.lineTo(x1, y0); 
+    ctx.stroke();
+    
+    // Hauteur (orange)
+    ctx.strokeStyle = '#f59e0b'; 
+    ctx.beginPath(); 
+    ctx.moveTo(x1, y0); 
+    ctx.lineTo(x1, y1); 
+    ctx.stroke();
+    
+    // Hypoténuse (bleue)
+    ctx.strokeStyle = '#38bdf8'; 
+    ctx.beginPath(); 
+    ctx.moveTo(x0, y0); 
+    ctx.lineTo(x1, y1); 
+    ctx.stroke();
 
-        // Affichage des labels
-        ctx.textAlign = "center";
-        ctx.fillText(getMod(hKey, h, units[0]), x0 + (h * scale) / 2, y0 + 20); // Horizontal
-        
-        ctx.textAlign = "left";
-        ctx.fillText(getMod(vKey, v, units[1]), x1 + 10, y0 - (v * scale) / 2); // Vertical
-        
-        ctx.textAlign = "center";
-        ctx.fillText(getMod(hypKey, hyp, units[2]), x0 + (h * scale) / 3, y1 - 12); // Hypoténuse
-    };
+    // 2. Calcul de l'angle de l'hypoténuse pour le texte parallèle
+    const angleHyp = Math.atan2(y1 - y0, x1 - x0);
+    
+    // 3. Position du texte sur l'hypoténuse (au milieu + un peu décalé)
+    const midHypX = x0 + (x1 - x0) * 0.5;
+    const midHypY = y0 + (y1 - y0) * 0.5;
+    
+    // Décalage perpendiculaire pour ne pas superposer la ligne
+    const offset = 15;
+    const textX = midHypX + offset * Math.sin(angleHyp);
+    const textY = midHypY - offset * Math.cos(angleHyp);
 
-    // Appels pour les 3 triangles avec leurs unités respectives
-    drawTri('fresnelU', 'UR', 'UL', 'U', ['V', 'V', 'V']);
-    drawTri('fresnelZ', 'R', 'XL', 'Z', ['Ω', 'Ω', 'Ω']);
-    drawTri('fresnelS', 'P', 'Q', 'S', ['W', 'var', 'VA']);
+    // 4. Affichage des labels avec couleurs correspondantes
+    ctx.font = "bold 10px Segoe UI";
+    
+    // Texte horizontal (base) - VERT
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(getMod(hKey, h, units[0]), x0 + (h * scale) / 2, y0 + 10);
+    
+    // Texte vertical (hauteur) - ORANGE
+    ctx.fillStyle = '#f59e0b';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(getMod(vKey, v, units[1]), x1 + 8, y0 - (v * scale) / 2);
+    
+    // Texte hypoténuse - BLEU et PARALLELE
+    ctx.save(); // Sauvegarder l'état du contexte
+    
+    // Positionner et pivoter le contexte pour l'hypoténuse
+    ctx.translate(textX, textY);
+    ctx.rotate(angleHyp);
+    
+    ctx.fillStyle = '#38bdf8';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(getMod(hypKey, hyp, units[2]), 0, 0);
+    
+    ctx.restore(); // Restaurer l'état du contexte
+};
+
+// Appels pour les 3 triangles avec leurs unités respectives
+drawTri('fresnelU', 'UR', 'UL', 'U', ['V', 'V', 'V']);
+drawTri('fresnelZ', 'R', 'XL', 'Z', ['Ω', 'Ω', 'Ω']);
+drawTri('fresnelS', 'P', 'Q', 'S', ['W', 'var', 'VA']);
 
     // --- Partie Oscilloscope & Fresnel ---
     const scope = document.getElementById('scopeCanvas');
