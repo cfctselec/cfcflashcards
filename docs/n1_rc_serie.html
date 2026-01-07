@@ -429,7 +429,7 @@
             // --- 4. IMPÉDANCES ET COMPOSANTS (f, C, R, XC, Z) ---
             { req: ['U', 'I'], res: 'Z', t: "Impédance totale", f: "Z = \\frac{U}{I} \\quad [\\Omega]" },
             { req: ['P', 'I'], res: 'R', t: "Résistance", f: "R = \\frac{P}{I^2} \\quad [\\Omega]" },
-            { req: ['Q', 'I'], res: 'XC', t: "Réactance capacitive", f: "X_C = -\\frac{Q}{I^2} \\quad [\\Omega]" },
+            { req: ['Q', 'I'], res: 'XC', t: "Réactance capacitive", f: "X_C = \\frac{Q}{I^2} \\quad [\\Omega]" },
             { req: ['Z', 'cos_phi'], res: 'R', t: "Résistance", f: "R = Z \\cdot \\cos\\varphi \\quad [\\Omega]" },
             { req: ['Z', 'R'], res: 'XC', t: "Réactance capacitive", f: "X_C = \\sqrt{Z^2 - R^2} \\quad [\\Omega]" },
             { req: ['R', 'XC'], res: 'Z', t: "Impédance totale", f: "Z = \\sqrt{R^2 + X_C^2} \\quad [\\Omega]" },
