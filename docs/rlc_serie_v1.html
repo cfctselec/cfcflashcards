@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8"/>
+  <title>Exercices interactifs – RLC série (AC)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <!-- MathJax correctement chargé -->
+  <script>
+    window.MathJax = { 
+      tex: { 
+        inlineMath: [['\\(','\\)'], ['$', '$']],
+        displayMath: [['\\[','\\]']]
+      },
+      startup: {
+        ready: () => {
+          MathJax.startup.defaultReady();
+          // S'assurer que MathJax ne bloque pas l'interface
+          MathJax.startup.promise.then(() => {
+            console.log('MathJax chargé');
+          });
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+
+  <style>
+    :root { --bg:#0f172a; --card:#1f2937; --border:#374151; --text:#e5e7eb; --muted:#9ca3af;
+            --accent:#06b6d4; --accent2:#22c55e; --warn:#ef4444; --yellow:#f59e0b; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      background: radial-gradient(1200px 500px at 80% -100%, rgba(6,182,212,.10), transparent 80%),
+                  radial-gradient(800px 400px at -40% 20%, rgba(34,197,94,.08), transparent 80%),
+                  var(--bg);
+      color:var(--text); line-height:1.6;
+      min-height:100vh;
+    }
+    header{padding:24px 20px; border-bottom:1px solid var(--border)}
+    h1{margin:0; font-size:1.6rem} .subtitle{color:var(--muted); font-size:.95rem; margin-top:6px}
+    main{max-width:980px; margin:24px auto; padding:0 16px}
+    .card{background:linear-gradient(180deg, rgba(31,41,55,.75), rgba(31,41,55,.95)); border:1px solid var(--border); border-radius:12px; padding:16px}
+    .toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+    button{background:linear-gradient(180deg, rgba(6,182,212,.15), rgba(6,182,212,.05)); color:var(--text);
+           border:1px solid rgba(6,182,212,.35); border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:600;
+           transition:border-color 0.2s; min-width:44px; min-height:44px;}
+    button:hover{border-color:rgba(6,182,212,.6)}
+    button:disabled{opacity:0.5; cursor:not-allowed;}
+    .secondary{background:linear-gradient(180deg, rgba(55,65,81,.4), rgba(55,65,81,.15)); border-color:var(--border)}
+    .danger{background:linear-gradient(180deg, rgba(239,68,68,.18), rgba(239,68,68,.06)); border-color:rgba(239,68,68,.45)}
+    .section-title{font-weight:700; margin:8px 0 10px; font-size:1.05rem}
+    .given,.inputs,.solution{background:rgba(2,6,23,.25); border:1px dashed var(--border); border-radius:10px; padding:12px}
+    .note{background:rgba(245,158,11,.12); border-left:3px solid var(--yellow); padding:8px 10px; border-radius:8px; margin:10px 0}
+    .input-row{display:grid; grid-template-columns:1.3fr .9fr .5fr .7fr; gap:8px; align-items:center; margin:8px 0}
+    input[type="text"]{width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:rgba(17,24,39,.65); color:var(--text); font-size:1rem;}
+    .unit{color:var(--muted)} .status{font-weight:700}
+    .ok{color:var(--accent2)} .ko{color:var(--warn)}
+    .legend{color:var(--muted); font-size:.9rem}
+    .debug{color:var(--muted); font-size:.85rem; margin-top:6px; word-break:break-all;}
+    canvas{width:100%; height:300px; background:rgba(17,24,39,.6); border:1px solid var(--border); border-radius:10px; display:block;}
+    .loading{text-align:center; padding:20px; color:var(--accent);}
+    .error{background:rgba(239,68,68,.1); border-left:3px solid var(--warn); padding:10px; border-radius:8px; margin:10px 0;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Exercices interactifs – Circuit RLC série (régime sinusoïdal)</h1>
+  <div class="subtitle">Uniquement 4 grandeurs données aléatoirement · Les 10 restantes à calculer · MathJax</div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="toolbar">
+      <button id="newBtn">➕ Nouvel exercice</button>
+      <button id="checkBtn" class="secondary">✅ Vérifier</button>
+      <button id="answersBtn" class="secondary">🧮 Réponses (remplir les cases)</button>
+      <button id="resetBtn" class="danger">♻️ Effacer</button>
+    </div>
+
+    <div class="section-title">Données (4 grandeurs aléatoires)</div>
+    <div class="given" id="statement"></div>
+
+    <div class="note">
+      <strong>Important :</strong> Faire tous les calculs sur une <strong>feuille de papier</strong> avant de vérifier ici.<br>
+      Cette application est faite pour l'entraînement pour les examens finaux en électricité
+    </div>
+
+    <div class="section-title">Les 10 grandeurs à déterminer</div>
+    <div class="inputs" id="inputs"></div>
+
+    <div class="feedback" id="feedback"></div>
+    <div class="legend">Tolérance : ±2% (ou marges fixes pour \(\varphi\), \(\cos\varphi\), \(f\), \(C\), \(R\)). Décimales avec <em>virgule</em> ou <em>point</em>.</div>
+
+    <div class="section-title">Corrigé des 10 grandeurs</div>
+    <div class="solution" id="solution" style="display:none;"></div>
+
+    <div class="debug" id="debug"></div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">Diagramme de Fresnel (phasors, référence courant)</div>
+    <canvas id="phasorCanvas" width="800" height="300"></canvas>
+    <div class="legend">Référence : \(I\) sur l'axe réel. On trace \(V_R\), \(V_L\), \(V_C\), \(V_S\) et l'angle \(\varphi\).</div>
+    <div id="phasorNote" class="note" style="display:none;"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  // ---------- Utilitaires ----------
+  const randBetween = (min, max) => min + Math.random() * (max - min);
+  const randInt = (min, max) => Math.floor(randBetween(min, max + 1));
+  const choice = arr => arr[Math.floor(Math.random() * arr.length)];
+  const shuffle = arr => {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+  
+  const parseLocaleFloat = s => {
+    const str = String(s || '').trim();
+    if (!str) return NaN;
+    // Remplace virgule par point et supprime les espaces
+    const cleaned = str.replace(/\s/g, '').replace(',', '.');
+    const num = parseFloat(cleaned);
+    return isFinite(num) ? num : NaN;
+  };
+  
+  const fmt = (x, digits = 3) => {
+    if (!isFinite(x)) return '?';
+    return Number(x).toLocaleString('fr-FR', {
+      maximumFractionDigits: digits,
+      minimumFractionDigits: 0
+    });
+  };
+  
+  const rad2deg = r => (r * 180 / Math.PI) % 360;
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  // ---------- DOM ----------
+  const dom = {
+    statement: document.getElementById('statement'),
+    inputs: document.getElementById('inputs'),
+    feedback: document.getElementById('feedback'),
+    solution: document.getElementById('solution'),
+    debug: document.getElementById('debug'),
+    phasorCanvas: document.getElementById('phasorCanvas'),
+    phasorNote: document.getElementById('phasorNote'),
+    newBtn: document.getElementById('newBtn'),
+    checkBtn: document.getElementById('checkBtn'),
+    answersBtn: document.getElementById('answersBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+  };
+
+  // ---------- État ----------
+  let current = null;
+  let lastGivenKeys = [];
+  const tolRel = 0.02;
+
+  // ---------- Génération sécurisée ----------
+  function generateExercise() {
+    try {
+      // Désactiver les boutons pendant la génération
+      setButtonsState(false);
+      
+      // Nettoyer l'affichage
+      dom.statement.innerHTML = '<div class="loading">Génération de l\'exercice...</div>';
+      dom.inputs.innerHTML = '';
+      dom.feedback.textContent = '';
+      dom.solution.style.display = 'none';
+      dom.debug.textContent = '';
+      
+      // Génération avec boucle de sécurité
+      let exercise = null;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        exercise = attemptGenerate();
+        if (exercise) break;
+      }
+      
+      if (!exercise) {
+        throw new Error('Impossible de générer un exercice valide après 50 essais');
+      }
+      
+      current = exercise;
+      
+      // Rendu
+      renderStatement();
+      renderInputs();
+      renderSolution();
+      drawPhasors();
+      
+      // Typeset MathJax de manière asynchrone pour éviter le blocage
+      if (window.MathJax?.typesetPromise) {
+        setTimeout(() => {
+          window.MathJax.typesetPromise().catch(err => {
+            console.warn('MathJax typeset error:', err);
+          });
+        }, 100);
+      }
+      
+      dom.debug.textContent = `Données (4) : [${exercise.givenKeys.join(', ')}] · À déterminer (10) : [${exercise.unknownKeys.join(', ')}]`;
+      
+    } catch (error) {
+      console.error('Erreur lors de la génération:', error);
+      dom.statement.innerHTML = `<div class="error">Erreur: ${error.message}. Veuillez réessayer.</div>`;
+      dom.debug.textContent = `Erreur: ${error.message}`;
+    } finally {
+      setButtonsState(true);
+    }
+  }
+
+  function attemptGenerate() {
+    // Données internes aléatoires (RMS)
+    const U = choice([120, 230, 240]);
+    const f = randInt(45, 65);
+    const R = randInt(20, 150);
+    const L_mH = randBetween(20, 300);
+    const C_uF = randBetween(2, 80);
+
+    // Conversion SI
+    const L = L_mH / 1000;
+    const C = C_uF * 1e-6;
+    const w = 2 * Math.PI * f;
+    const XL = w * L;
+    const XC = 1 / (w * C);
+    const X = XL - XC;
+    const Z = Math.sqrt(R * R + X * X);
+    const I = U / Z;
+    const phi = Math.atan2(X, R); // Utiliser atan2 pour gérer les signes
+    const cosphi = clamp(R / Z, -1, 1);
+    const S = U * I;
+    const P = U * I * Math.cos(phi);
+    const Q = U * I * Math.sin(phi);
+    const UR = I * R;
+    const UC = I * XC;
+
+    // Vérifications de validité
+    if (!isFinite(I) || I <= 0 || I > 20 || Z === 0) {
+      return null;
+    }
+
+    // Pool des 14 grandeurs
+    const pool = [
+      {key: 'f',    label: 'Fréquence \\(f\\)', unit: 'Hz', value: f, fmtDigits: 2, absTol: 0.2},
+      {key: 'U',    label: 'Tension efficace \\(U\\)', unit: 'V', value: U, fmtDigits: 2},
+      {key: 'UR',   label: 'Tension sur la résistance \\(U_R\\)', unit: 'V', value: UR, fmtDigits: 2},
+      {key: 'UC',   label: 'Tension sur le condensateur \\(U_C\\)', unit: 'V', value: UC, fmtDigits: 2},
+      {key: 'C',    label: 'Capacité \\(C\\)', unit: 'µF', value: C_uF, fmtDigits: 2, absTol: 0.1},
+      {key: 'I',    label: 'Courant \\(I\\)', unit: 'A', value: I, fmtDigits: 3},
+      {key: 'Z',    label: 'Impédance \\(Z\\)', unit: 'Ω', value: Z, fmtDigits: 3},
+      {key: 'R',    label: 'Résistance \\(R\\)', unit: 'Ω', value: R, fmtDigits: 2, absTol: 0.5},
+      {key: 'XC',   label: 'Réactance capacitive \\(X_C\\)', unit: 'Ω', value: XC, fmtDigits: 3},
+      {key: 'P',    label: 'Puissance active \\(P\\)', unit: 'W', value: P, fmtDigits: 3},
+      {key: 'Q',    label: 'Puissance réactive \\(Q\\)', unit: 'var', value: Q, fmtDigits: 3},
+      {key: 'S',    label: 'Puissance apparente \\(S\\)', unit: 'VA', value: S, fmtDigits: 3},
+      {key: 'cosphi', label: 'Facteur de puissance \\(\\cos\\varphi\\)', unit: '', value: cosphi, fmtDigits: 3, absTol: 0.01},
+      {key: 'phi',  label: 'Angle de phase \\(\\varphi\\) (degrés)', unit: '°', value: rad2deg(phi), fmtDigits: 2, absTol: 0.5}
+    ];
+    
+    const poolByKey = Object.fromEntries(pool.map(p => [p.key, p]));
+
+    // Sélection des 4 grandeurs données
+    let givenKeys = [];
+    if (lastGivenKeys.length === 0) {
+      givenKeys = shuffle(pool.map(p => p.key)).slice(0, 4);
+    } else {
+      // Éviter la répétition exacte
+      const availableKeys = pool.map(p => p.key).filter(k => !lastGivenKeys.includes(k));
+      givenKeys = shuffle(availableKeys).slice(0, 4);
+      
+      // Si pas assez de clés différentes, prendre aléatoirement
+      if (givenKeys.length < 4) {
+        givenKeys = shuffle(pool.map(p => p.key)).slice(0, 4);
+      }
+    }
+    
+    lastGivenKeys = [...givenKeys];
+
+    // Les 10 grandeurs à déterminer
+    const unknownKeys = pool.map(p => p.key).filter(k => !givenKeys.includes(k));
+    const unknowns = unknownKeys.map(k => poolByKey[k]);
+    const givens = givenKeys.map(k => poolByKey[k]);
+
+    return {
+      givens,
+      unknowns,
+      givenKeys,
+      unknownKeys,
+      givenValues: { U, f, R, L, C, L_mH, C_uF, w, XL, XC, X, Z, I, phi, cosphi, S, P, Q, UR, UC }
+    };
+  }
+
+  // ---------- Rendus ----------
+  function renderStatement() {
+    let html = '';
+    current.givens.forEach(g => {
+      html += `<p>${g.label} = <strong>${fmt(g.value, g.fmtDigits ?? 3)} ${g.unit}</strong></p>`;
+    });
+    dom.statement.innerHTML = html;
+  }
+
+  function renderInputs() {
+    let html = '';
+    current.unknowns.forEach(u => {
+      html += `
+        <div class="input-row">
+          <div>${u.label}</div>
+          <div><input type="text" inputmode="decimal" data-key="${u.key}" placeholder="Entrez votre valeur"/></div>
+          <div class="unit">${u.unit}</div>
+          <div class="status" id="status_${u.key}"></div>
+        </div>`;
+    });
+    dom.inputs.innerHTML = html;
+    dom.feedback.textContent = '';
+    dom.solution.style.display = 'none';
+  }
+
+  function renderSolution() {
+    let s = '<p><strong>Corrigé – les 10 grandeurs à déterminer :</strong></p>';
+    current.unknowns.forEach(u => {
+      s += `<p>${u.label} = <strong>${fmt(u.value, u.fmtDigits ?? 3)} ${u.unit}</strong></p>`;
+    });
+    dom.solution.innerHTML = s;
+  }
+
+  // ---------- Vérification ----------
+  function toleranceOK(val, target, absTol, relTol = tolRel) {
+    if (!isFinite(val)) return false;
+    if (absTol != null) return Math.abs(val - target) <= absTol;
+    const denom = Math.max(Math.abs(target), 1e-12);
+    return Math.abs((val - target) / denom) <= relTol;
+  }
+
+  function checkAnswers() {
+    try {
+      let correct = 0, total = current.unknowns.length;
+      
+      current.unknowns.forEach(u => {
+        const input = document.querySelector(`input[data-key="${u.key}"]`);
+        const status = document.getElementById(`status_${u.key}`);
+        if (!input || !status) return;
+        
+        const userVal = parseLocaleFloat(input.value);
+        const ok = toleranceOK(userVal, u.value, u.absTol, tolRel);
+        
+        if (ok) {
+          status.innerHTML = `<span class="ok">✔ correct</span>`;
+          correct++;
+        } else {
+          status.innerHTML = `<span class="ko">❌ attendu ≈ ${fmt(u.value, u.fmtDigits ?? 3)} ${u.unit}</span>`;
+        }
+      });
+      
+      dom.feedback.textContent = `Résultat : ${correct} / ${total} correct(s).`;
+    } catch (error) {
+      console.error('Erreur lors de la vérification:', error);
+      dom.feedback.textContent = 'Erreur lors de la vérification.';
+    }
+  }
+
+  function fillAnswers() {
+    try {
+      current.unknowns.forEach(u => {
+        const input = document.querySelector(`input[data-key="${u.key}"]`);
+        if (!input) return;
+        
+        const digits = u.fmtDigits ?? 3;
+        const multiplier = Math.pow(10, digits);
+        const rounded = Math.round(u.value * multiplier) / multiplier;
+        input.value = rounded.toString().replace('.', ',');
+        
+        const status = document.getElementById(`status_${u.key}`);
+        if (status) {
+          status.innerHTML = `<span class="ok">✔ réponse affichée</span>`;
+        }
+      });
+      
+      dom.feedback.textContent = `Les réponses attendues ont été remplies dans les cases.`;
+      dom.solution.style.display = 'block';
+    } catch (error) {
+      console.error('Erreur lors du remplissage des réponses:', error);
+      dom.feedback.textContent = 'Erreur lors du remplissage des réponses.';
+    }
+  }
+
+  function resetInputs() {
+    try {
+      const allInputs = dom.inputs.querySelectorAll('input[type="text"]');
+      allInputs.forEach(inp => inp.value = '');
+      
+      const allStatus = dom.inputs.querySelectorAll('.status');
+      allStatus.forEach(st => st.textContent = '');
+      
+      dom.feedback.textContent = '';
+      dom.solution.style.display = 'none';
+    } catch (error) {
+      console.error('Erreur lors de la réinitialisation:', error);
+    }
+  }
+
+  // ---------- Fresnel ----------
+  function drawPhasors() {
+    try {
+      const c = dom.phasorCanvas;
+      const ctx = c.getContext('2d');
+      
+      if (!ctx) {
+        dom.phasorNote.style.display = 'block';
+        dom.phasorNote.textContent = "Canvas non supporté.";
+        return;
+      }
+      
+      ctx.clearRect(0, 0, c.width, c.height);
+      
+      const g = current.givenValues;
+      const I = g.I;
+      
+      if (!isFinite(I) || I <= 0) {
+        dom.phasorNote.style.display = 'block';
+        dom.phasorNote.textContent = "Diagramme indisponible (courant non défini).";
+        return;
+      }
+      
+      dom.phasorNote.style.display = 'none';
+      
+      const VR = I * g.R;
+      const VL = I * g.XL;
+      const VC = I * g.XC;
+      const VSx = VR;
+      const VSy = VL - VC;
+      
+      const magnitudes = [Math.abs(VR), Math.abs(VL), Math.abs(VC), Math.hypot(VSx, VSy)];
+      const maxMag = Math.max(...magnitudes.filter(isFinite));
+      
+      if (maxMag === 0) {
+        ctx.fillStyle = 'rgba(148,163,184,.7)';
+        ctx.font = '16px system-ui';
+        ctx.fillText('Aucun vecteur à afficher', c.width/2 - 80, c.height/2);
+        return;
+      }
+      
+      const scale = (c.width * 0.35) / Math.max(maxMag, 1);
+      const cx = c.width * 0.5;
+      const cy = c.height * 0.75;
+      
+      // Axes
+      ctx.strokeStyle = 'rgba(148,163,184,.7)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(20, cy);
+      ctx.lineTo(c.width - 20, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, 20);
+      ctx.lineTo(cx, c.height - 20);
+      ctx.stroke();
+      
+      // Flèche utilitaire
+      function arrow(x1, y1, x2, y2, color, label) {
+        if (!isFinite(x1) || !isFinite(y1) || !isFinite(x2) || !isFinite(y2)) return;
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        
+        const ang = Math.atan2(y2 - y1, x2 - x1);
+        const ah = 8;
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - ah * Math.cos(ang - 0.35), y2 - ah * Math.sin(ang - 0.35));
+        ctx.lineTo(x2 - ah * Math.cos(ang + 0.35), y2 - ah * Math.sin(ang + 0.35));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        
+        ctx.fillStyle = color;
+        ctx.font = '12px system-ui';
+        ctx.fillText(label, x2 + 6, y2 - 6);
+      }
+      
+      // Dessins
+      arrow(cx, cy, cx + Math.min(I * scale * 50, 100), cy, 'rgba(34,197,94,.9)', 'I (réf.)');
+      
+      if (Math.abs(VR) > 0.01) {
+        arrow(cx, cy, cx + VR * scale, cy, 'rgba(59,130,246,.9)', 'V_R');
+      }
+      
+      if (Math.abs(VL) > 0.01) {
+        const startX = cx + VR * scale;
+        arrow(startX, cy, startX, cy - VL * scale, 'rgba(234,179,8,.9)', 'V_L');
+      }
+      
+      if (Math.abs(VC) > 0.01) {
+        const startY = cy - VL * scale;
+        arrow(cx + VR * scale, startY, cx + VR * scale, startY + VC * scale, 'rgba(244,63,94,.9)', 'V_C');
+      }
+      
+      if (Math.abs(VSx) > 0.01 || Math.abs(VSy) > 0.01) {
+        arrow(cx, cy, cx + VSx * scale, cy - VSy * scale, 'rgba(6,182,212,.9)', 'V_S');
+      }
+      
+      const phi = Math.atan2(VSy, VSx);
+      if (Math.abs(phi) > 0.01) {
+        ctx.strokeStyle = 'rgba(6,182,212,.6)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 40, 0, phi > 0 ? -phi : -phi);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(6,182,212,.8)';
+        ctx.font = '12px system-ui';
+        ctx.fillText(`φ ≈ ${rad2deg(phi).toFixed(2)}°`, cx + 44, cy - 6);
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors du dessin des phaseurs:', error);
+      dom.phasorNote.style.display = 'block';
+      dom.phasorNote.textContent = "Erreur lors du dessin du diagramme.";
+    }
+  }
+
+  // ---------- Gestion des boutons ----------
+  function setButtonsState(enabled) {
+    const buttons = [dom.newBtn, dom.checkBtn, dom.answersBtn, dom.resetBtn];
+    buttons.forEach(btn => {
+      if (btn) {
+        btn.disabled = !enabled;
+        btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+      }
+    });
+  }
+
+  // ---------- Événements ----------
+  function setupEventListeners() {
+    dom.newBtn.addEventListener('click', generateExercise);
+    dom.checkBtn.addEventListener('click', checkAnswers);
+    dom.answersBtn.addEventListener('click', fillAnswers);
+    dom.resetBtn.addEventListener('click', resetInputs);
+    
+    // Empêcher la soumission du formulaire si des champs input sont focus
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+        e.preventDefault();
+        checkAnswers();
+      }
+    });
+  }
+
+  // ---------- Initialisation ----------
+  function init() {
+    try {
+      setupEventListeners();
+      generateExercise();
+      
+      // Redimensionnement du canvas
+      window.addEventListener('resize', () => {
+        if (current) {
+          drawPhasors();
+        }
+      });
+      
+      console.log('Application initialisée avec succès');
+    } catch (error) {
+      console.error('Erreur d\'initialisation:', error);
+      dom.statement.innerHTML = `<div class="error">Erreur d'initialisation: ${error.message}</div>`;
+    }
+  }
+
+  // Démarrer l'application
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
