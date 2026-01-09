@@ -245,20 +245,20 @@
 
     // Pool des 14 grandeurs
     const pool = [
-      {key: 'f',    label: 'Fréquence \\(f\\)', unit: 'Hz', value: f, fmtDigits: 2, absTol: 0.2},
-      {key: 'U',    label: 'Tension efficace \\(U\\)', unit: 'V', value: U, fmtDigits: 2},
-      {key: 'UR',   label: 'Tension sur la résistance \\(U_R\\)', unit: 'V', value: UR, fmtDigits: 2},
-      {key: 'UC',   label: 'Tension sur le condensateur \\(U_C\\)', unit: 'V', value: UC, fmtDigits: 2},
-      {key: 'C',    label: 'Capacité \\(C\\)', unit: 'µF', value: C_uF, fmtDigits: 2, absTol: 0.1},
-      {key: 'I',    label: 'Courant \\(I\\)', unit: 'A', value: I, fmtDigits: 3},
-      {key: 'Z',    label: 'Impédance \\(Z\\)', unit: 'Ω', value: Z, fmtDigits: 3},
-      {key: 'R',    label: 'Résistance \\(R\\)', unit: 'Ω', value: R, fmtDigits: 2, absTol: 0.5},
-      {key: 'XC',   label: 'Réactance capacitive \\(X_C\\)', unit: 'Ω', value: XC, fmtDigits: 3},
-      {key: 'P',    label: 'Puissance active \\(P\\)', unit: 'W', value: P, fmtDigits: 3},
-      {key: 'Q',    label: 'Puissance réactive \\(Q\\)', unit: 'var', value: Q, fmtDigits: 3},
-      {key: 'S',    label: 'Puissance apparente \\(S\\)', unit: 'VA', value: S, fmtDigits: 3},
-      {key: 'cosphi', label: 'Facteur de puissance \\(\\cos\\varphi\\)', unit: '', value: cosphi, fmtDigits: 3, absTol: 0.01},
-      {key: 'phi',  label: 'Angle de phase \\(\\varphi\\) (degrés)', unit: '°', value: rad2deg(phi), fmtDigits: 2, absTol: 0.5}
+      {key: 'f',    label: 'Fréquence \\(f\\)', unit: '[Hz]', value: f, fmtDigits: 2, absTol: 0.2},
+      {key: 'U',    label: 'Tension efficace \\(U\\)', unit: '[V]', value: U, fmtDigits: 2},
+      {key: 'UR',   label: 'Tension sur la résistance \\(U_R\\)', unit: '[V]', value: UR, fmtDigits: 2},
+      {key: 'UC',   label: 'Tension sur le condensateur \\(U_C\\)', unit: '[V]', value: UC, fmtDigits: 2},
+      {key: 'C',    label: 'Capacité \\(C\\)', unit: '[µF]', value: C_uF, fmtDigits: 2, absTol: 0.1},
+      {key: 'I',    label: 'Courant \\(I\\)', unit: '[A]', value: I, fmtDigits: 3},
+      {key: 'Z',    label: 'Impédance \\(Z\\)', unit: '[Ω]', value: Z, fmtDigits: 3},
+      {key: 'R',    label: 'Résistance \\(R\\)', unit: '[Ω]', value: R, fmtDigits: 2, absTol: 0.5},
+      {key: 'XC',   label: 'Réactance capacitive \\(X_C\\)', unit: '[Ω]', value: XC, fmtDigits: 3},
+      {key: 'P',    label: 'Puissance active \\(P\\)', unit: '[W]', value: P, fmtDigits: 3},
+      {key: 'Q',    label: 'Puissance réactive \\(Q\\)', unit: '[var]', value: Q, fmtDigits: 3},
+      {key: 'S',    label: 'Puissance apparente \\(S\\)', unit: '[VA]', value: S, fmtDigits: 3},
+      {key: 'cosphi', label: 'Facteur de puissance \\(\\cos\\varphi\\)', unit: '[-]', value: cosphi, fmtDigits: 3, absTol: 0.01},
+      {key: 'phi',  label: 'Angle de phase \\(\\varphi\\) (degrés)', unit: '[°]', value: rad2deg(phi), fmtDigits: 2, absTol: 0.5}
     ];
     
     const poolByKey = Object.fromEntries(pool.map(p => [p.key, p]));
