@@ -99,9 +99,9 @@
   </section>
 
   <section class="card">
-    <div class="section-title">Diagramme de Fresnel (phasors, référence courant)</div>
+    <div class="section-title">Diagramme de Fresnel (Vectoriel, référence courant)</div>
     <canvas id="phasorCanvas" width="800" height="300"></canvas>
-    <div class="legend">Référence : \(I\) sur l'axe réel. On trace \(V_R\), \(V_L\), \(V_C\), \(V_S\) et l'angle \(\varphi\).</div>
+    <div class="legend">Référence : \(I\) sur l'axe horizontal. On trace \(U_R\), \(U_L\), \(U_C\), \(U\) et l'angle \(\varphi\).</div>
     <div id="phasorNote" class="note" style="display:none;"></div>
   </section>
 </main>
@@ -489,21 +489,21 @@
       arrow(cx, cy, cx + Math.min(I * scale * 50, 100), cy, 'rgba(34,197,94,.9)', 'I (réf.)');
       
       if (Math.abs(VR) > 0.01) {
-        arrow(cx, cy, cx + VR * scale, cy, 'rgba(59,130,246,.9)', 'V_R');
+        arrow(cx, cy, cx + VR * scale, cy, 'rgba(59,130,246,.9)', 'U_R');
       }
       
       if (Math.abs(VL) > 0.01) {
         const startX = cx + VR * scale;
-        arrow(startX, cy, startX, cy - VL * scale, 'rgba(234,179,8,.9)', 'V_L');
+        arrow(startX, cy, startX, cy - VL * scale, 'rgba(234,179,8,.9)', 'U_L');
       }
       
       if (Math.abs(VC) > 0.01) {
         const startY = cy - VL * scale;
-        arrow(cx + VR * scale, startY, cx + VR * scale, startY + VC * scale, 'rgba(244,63,94,.9)', 'V_C');
+        arrow(cx + VR * scale, startY, cx + VR * scale, startY + VC * scale, 'rgba(244,63,94,.9)', 'U_C');
       }
       
       if (Math.abs(VSx) > 0.01 || Math.abs(VSy) > 0.01) {
-        arrow(cx, cy, cx + VSx * scale, cy - VSy * scale, 'rgba(6,182,212,.9)', 'V_S');
+        arrow(cx, cy, cx + VSx * scale, cy - VSy * scale, 'rgba(6,182,212,.9)', 'U');
       }
       
       const phi = Math.atan2(VSy, VSx);
